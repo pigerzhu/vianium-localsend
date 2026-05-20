@@ -1,0 +1,57 @@
+<Page
+    x:Class="Vianium.LocalSend.Pages.ChangelogPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <ScrollViewer Margin="19,12,19,0">
+        <StackPanel>
+            <TextBlock x:Name="PageTitle" FontSize="26" FontWeight="Light"
+                       Margin="0,8,0,20"/>
+
+            <!-- Version 1.0.1 -->
+            <TextBlock x:Name="V101Header" FontSize="13"
+                       Foreground="{ThemeResource PhoneSubtleBrush}"
+                       FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <Grid Background="{ThemeResource PhoneChromeBrush}" Margin="0,0,0,16">
+                <StackPanel Margin="14">
+                    <TextBlock x:Name="V101Fix1Title" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="V101Fix1Desc" FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,2,0,10"/>
+
+                    <TextBlock x:Name="V101Fix2Title" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="V101Fix2Desc" FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,2,0,10"/>
+
+                    <TextBlock x:Name="V101Fix3Title" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="V101Fix3Desc" FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,2,0,10"/>
+
+                    <TextBlock x:Name="V101Fix4Title" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="V101Fix4Desc" FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,2,0,10"/>
+
+                    <TextBlock x:Name="V101Fix5Title" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="V101Fix5Desc" FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Version 1.0.0 -->
+            <TextBlock x:Name="V100Header" FontSize="13"
+                       Foreground="{ThemeResource PhoneSubtleBrush}"
+                       FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <Grid Background="{ThemeResource PhoneChromeBrush}" Margin="0,0,0,30">
+                <StackPanel Margin="14">
+                    <TextBlock x:Name="V100Desc" FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

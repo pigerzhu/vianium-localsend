@@ -1,0 +1,45 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vianium.LocalSend", "src\Vianium.LocalSend\Vianium.LocalSend.csproj", "{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vianium.LocalSend.SmokeTests", "Clients\Vianium.LocalSend.SmokeTests\Vianium.LocalSend.SmokeTests.csproj", "{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|x86 = Debug|x86
+		Release|ARM = Release|ARM
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Debug|ARM.ActiveCfg = Debug|ARM
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Debug|ARM.Build.0 = Debug|ARM
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Debug|ARM.Deploy.0 = Debug|ARM
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Debug|x86.ActiveCfg = Debug|x86
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Debug|x86.Build.0 = Debug|x86
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Debug|x86.Deploy.0 = Debug|x86
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Release|ARM.ActiveCfg = Release|ARM
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Release|ARM.Build.0 = Release|ARM
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Release|ARM.Deploy.0 = Release|ARM
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Release|x86.ActiveCfg = Release|x86
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Release|x86.Build.0 = Release|x86
+		{F5A6B7C8-D9E0-4F1A-2B3C-4D5E6F7A8B9C}.Release|x86.Deploy.0 = Release|x86
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Debug|ARM.ActiveCfg = Debug|ARM
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Debug|ARM.Build.0 = Debug|ARM
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Debug|ARM.Deploy.0 = Debug|ARM
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Debug|x86.ActiveCfg = Debug|x86
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Debug|x86.Build.0 = Debug|x86
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Debug|x86.Deploy.0 = Debug|x86
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Release|ARM.ActiveCfg = Release|ARM
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Release|ARM.Build.0 = Release|ARM
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Release|ARM.Deploy.0 = Release|ARM
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Release|x86.ActiveCfg = Release|x86
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Release|x86.Build.0 = Release|x86
+		{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}.Release|x86.Deploy.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

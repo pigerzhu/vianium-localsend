@@ -1,0 +1,20 @@
+<Application
+    x:Class="Vianium.LocalSend.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Vianium.LocalSend">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="PhoneSubtleBrush" Color="#FF8B949E" />
+                    <SolidColorBrush x:Key="PhoneChromeBrush" Color="#FF1F1F1F" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="PhoneSubtleBrush" Color="#FF656D76" />
+                    <SolidColorBrush x:Key="PhoneChromeBrush" Color="#FFF0F0F0" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

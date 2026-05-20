@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>8.1</ProductVersion>
+    <ProjectGuid>{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}</ProjectGuid>
+    <OutputType>AppContainerExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Vianium.LocalSend.SmokeTests</RootNamespace>
+    <AssemblyName>Vianium.LocalSend.SmokeTests</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
+    <SynthesizeLinkMetadata>true</SynthesizeLinkMetadata>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+    <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
+    <AppxBundlePlatforms>x86|arm</AppxBundlePlatforms>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <Optimize>true</Optimize>
+    <PlatformTarget>x86</PlatformTarget>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>ARM</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <Optimize>true</Optimize>
+    <PlatformTarget>ARM</PlatformTarget>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--
+      App + UI for the smoke-test runner.
+      Deploys as a standalone WP 8.1 AppContainerExe so the suite can be
+      launched from the emulator next to Vianium.LocalSend.
+    -->
+    <Compile Include="App.xaml.cs">
+      <DependentUpon>App.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MainPage.xaml.cs">
+      <DependentUpon>MainPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <!-- Test orchestrator -->
+    <Compile Include="SmokeTestRunner.cs" />
+    <!-- Smoke tests -->
+    <Compile Include="Tests\SimpleJsonParserSmoke.cs" />
+    <Compile Include="Tests\TokenGeneratorSmoke.cs" />
+    <Compile Include="Tests\FingerprintGeneratorSmoke.cs" />
+    <Compile Include="Tests\ProtocolConstantsSmoke.cs" />
+    <Compile Include="Tests\DeviceInfoSmoke.cs" />
+    <Compile Include="Tests\FileDtoSmoke.cs" />
+    <Compile Include="Tests\RequestParserSmoke.cs" />
+    <Compile Include="Tests\ProtocolFlowSmoke.cs" />
+    <!--
+      Linked compilation of LocalSend source files. The smoke-test
+      assembly is its own compilation unit; including the source files
+      here lets the tests reach the `internal` API surface without
+      changing the visibility of the production code in
+      Vianium.LocalSend.
+    -->
+    <Compile Include="..\..\src\Vianium.LocalSend\Json\SimpleJsonParser.cs">
+      <Link>Linked\Json\SimpleJsonParser.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\Vianium.LocalSend\Crypto\FingerprintGenerator.cs">
+      <Link>Linked\Crypto\FingerprintGenerator.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\Vianium.LocalSend\Protocol\ProtocolConstants.cs">
+      <Link>Linked\Protocol\ProtocolConstants.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\Vianium.LocalSend\Protocol\DeviceInfo.cs">
+      <Link>Linked\Protocol\DeviceInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\Vianium.LocalSend\Protocol\FileDto.cs">
+      <Link>Linked\Protocol\FileDto.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\Vianium.LocalSend\Protocol\TokenGenerator.cs">
+      <Link>Linked\Protocol\TokenGenerator.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\Vianium.LocalSend\Server\ServerRequest.cs">
+      <Link>Linked\Server\ServerRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\Vianium.LocalSend\Server\RequestParser.cs">
+      <Link>Linked\Server\RequestParser.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Page Include="MainPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+  <ItemGroup>
+    <!--
+      Reuse the main app's branding assets so the smoke runner deploys
+      with valid manifest references without duplicating PNG files.
+    -->
+    <Content Include="..\..\src\Vianium.LocalSend\Assets\Logo.scale-240.png">
+      <Link>Assets\Logo.scale-240.png</Link>
+    </Content>
+    <Content Include="..\..\src\Vianium.LocalSend\Assets\SmallLogo.scale-240.png">
+      <Link>Assets\SmallLogo.scale-240.png</Link>
+    </Content>
+    <Content Include="..\..\src\Vianium.LocalSend\Assets\StoreLogo.scale-240.png">
+      <Link>Assets\StoreLogo.scale-240.png</Link>
+    </Content>
+    <Content Include="..\..\src\Vianium.LocalSend\Assets\SplashScreen.scale-240.png">
+      <Link>Assets\SplashScreen.scale-240.png</Link>
+    </Content>
+    <Content Include="..\..\src\Vianium.LocalSend\Assets\Square71x71Logo.scale-240.png">
+      <Link>Assets\Square71x71Logo.scale-240.png</Link>
+    </Content>
+    <Content Include="..\..\src\Vianium.LocalSend\Assets\WideLogo.scale-240.png">
+      <Link>Assets\WideLogo.scale-240.png</Link>
+    </Content>
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
+    <VisualStudioVersion>14.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

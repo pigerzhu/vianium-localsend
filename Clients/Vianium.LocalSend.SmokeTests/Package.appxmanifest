@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest"
+         xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest"
+         xmlns:m3="http://schemas.microsoft.com/appx/2014/manifest"
+         xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
+  <Identity Name="VianiumLocalSendSmokeTests"
+            Publisher="CN=miche"
+            Version="0.1.0.0" />
+  <mp:PhoneIdentity PhoneProductId="b2c3d4e5-f6a7-4b8c-9d01-2e3f4a5b6c7d"
+                    PhonePublisherId="00000000-0000-0000-0000-000000000000" />
+  <Properties>
+    <DisplayName>Vianium LocalSend — Smoke Tests</DisplayName>
+    <PublisherDisplayName>Angel Careaga</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.scale-240.png</Logo>
+  </Properties>
+  <Prerequisites>
+    <OSMinVersion>6.3.1</OSMinVersion>
+    <OSMaxVersionTested>6.3.1</OSMaxVersionTested>
+  </Prerequisites>
+  <Resources>
+    <Resource Language="en-US" />
+  </Resources>
+  <Applications>
+    <Application Id="App"
+                 Executable="$targetnametoken$.exe"
+                 EntryPoint="Vianium.LocalSend.SmokeTests.App">
+      <m3:VisualElements DisplayName="Vianium LocalSend Smoke"
+                         Square150x150Logo="Assets\Logo.scale-240.png"
+                         Square44x44Logo="Assets\SmallLogo.scale-240.png"
+                         Description="Automated smoke-test runner for the Vianium LocalSend stack."
+                         ForegroundText="light"
+                         BackgroundColor="#3B82F6">
+        <m3:DefaultTile Square71x71Logo="Assets\Square71x71Logo.scale-240.png"
+                        Wide310x150Logo="Assets\WideLogo.scale-240.png" />
+        <m3:SplashScreen Image="Assets\SplashScreen.scale-240.png" />
+      </m3:VisualElements>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <Capability Name="internetClientServer" />
+    <Capability Name="privateNetworkClientServer" />
+  </Capabilities>
+</Package>
