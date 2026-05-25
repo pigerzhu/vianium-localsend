@@ -49,34 +49,69 @@ namespace Vianium.LocalSend.Server
         {
             if (_running) return;
 
-            _listener = new StreamSocketListener();
-            _listener.ConnectionReceived += OnConnectionReceived;
-            _listener.Control.QualityOfService = SocketQualityOfService.LowLatency;
+            var listener = new StreamSocketListener();
+            listener.ConnectionReceived += OnConnectionReceived;
+            listener.Control.QualityOfService = SocketQualityOfService.LowLatency;
 
-            await _listener.BindServiceNameAsync(port.ToString());
-            _running = true;
+            try
+            {
+                await listener.BindServiceNameAsync(port.ToString());
+                _listener = listener;
+                _running = true;
+            }
+            catch
+            {
+                SafeDisposeListener(listener);
+                throw;
+            }
 
             AppLog.I(TAG, "Started on port " + port);
         }
 
         public void Stop()
         {
-            if (!_running) return;
+            if (!_running && _listener == null) return;
             _running = false;
 
-            if (_listener != null)
-            {
-                _listener.ConnectionReceived -= OnConnectionReceived;
-                _listener.Dispose();
-                _listener = null;
-            }
+            var listener = _listener;
+            _listener = null;
+            SafeDisposeListener(listener);
 
             AppLog.I(TAG, "Stopped");
+        }
+
+        private void SafeDisposeListener(StreamSocketListener listener)
+        {
+            if (listener == null) return;
+
+            try
+            {
+                listener.ConnectionReceived -= OnConnectionReceived;
+            }
+            catch (Exception ex)
+            {
+                AppLog.W(TAG, "Ignoring listener event detach error: " + ex.Message);
+            }
+
+            try
+            {
+                listener.Dispose();
+            }
+            catch (Exception ex)
+            {
+                AppLog.W(TAG, "Ignoring listener dispose error: " + ex.Message);
+            }
         }
 
         private async void OnConnectionReceived(StreamSocketListener sender,
             StreamSocketListenerConnectionReceivedEventArgs args)
         {
+            if (!_running)
+            {
+                try { args.Socket.Dispose(); } catch { }
+                return;
+            }
+
             try
             {
                 await HandleConnectionAsync(args.Socket);

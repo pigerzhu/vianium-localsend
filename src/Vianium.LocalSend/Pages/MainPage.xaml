@@ -2,85 +2,289 @@
     x:Class="Vianium.LocalSend.Pages.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    xmlns:converters="using:Vianium.LocalSend.Converters"
+    Background="{ThemeResource PhoneBackgroundBrush}">
 
-    <Pivot Title="LOCALSEND" x:Name="MainPivot">
+    <Page.Resources>
+        <converters:HexToBrushConverter x:Key="HexToBrush"/>
 
-        <!-- TAB 1: RECIBIR -->
+        <!-- Equalizer animation for receive tab status -->
+        <Storyboard x:Name="EqStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="EqScale1"
+                             Storyboard.TargetProperty="ScaleY"
+                             From="0.2" To="1.0" Duration="0:0:0.80"
+                             AutoReverse="True">
+                <DoubleAnimation.EasingFunction>
+                    <SineEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="EqScale2"
+                             Storyboard.TargetProperty="ScaleY"
+                             From="0.2" To="1.0" Duration="0:0:0.90"
+                             BeginTime="0:0:0.15"
+                             AutoReverse="True">
+                <DoubleAnimation.EasingFunction>
+                    <SineEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="EqScale3"
+                             Storyboard.TargetProperty="ScaleY"
+                             From="0.2" To="1.0" Duration="0:0:1.00"
+                             BeginTime="0:0:0.05"
+                             AutoReverse="True">
+                <DoubleAnimation.EasingFunction>
+                    <SineEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="EqScale4"
+                             Storyboard.TargetProperty="ScaleY"
+                             From="0.2" To="1.0" Duration="0:0:0.70"
+                             BeginTime="0:0:0.22"
+                             AutoReverse="True">
+                <DoubleAnimation.EasingFunction>
+                    <SineEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </Page.Resources>
+
+    <Grid>
+        <!-- Standard Windows Phone Pivot -->
+        <Pivot x:Name="MainPivot" Title="LOCALSEND">
+
+        <!-- ═══════════════════════════════════════════════
+             TAB 1: RECIBIR
+        ═══════════════════════════════════════════════ -->
         <PivotItem x:Name="Tab1Header" Header="recibir">
-            <StackPanel Margin="0,8,0,0">
-                <Grid Background="{ThemeResource PhoneChromeBrush}" Margin="0,0,0,10">
-                    <StackPanel Margin="14">
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse x:Name="StatusDot" Width="10" Height="10"
-                                     Fill="#FF8B949E" Margin="0,0,10,0"/>
-                            <TextBlock x:Name="ServerStatusText" Text=""
-                                       FontSize="15"/>
+            <ScrollViewer VerticalScrollBarVisibility="Hidden"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="0,0,0,32">
+
+                    <!-- Status row: equalizer bars + status text -->
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                    Margin="0,0,10,0">
+                            <Rectangle Width="2" Height="12" Fill="#FF1BA1E2"
+                                       Margin="0,0,2,0" RenderTransformOrigin="0.5,1">
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform x:Name="EqScale1" ScaleY="0.5"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle Width="2" Height="12" Fill="#FF1BA1E2"
+                                       Margin="0,0,2,0" RenderTransformOrigin="0.5,1">
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform x:Name="EqScale2" ScaleY="0.8"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle Width="2" Height="12" Fill="#FF1BA1E2"
+                                       Margin="0,0,2,0" RenderTransformOrigin="0.5,1">
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform x:Name="EqScale3" ScaleY="0.35"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle Width="2" Height="12" Fill="#FF1BA1E2"
+                                       RenderTransformOrigin="0.5,1">
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform x:Name="EqScale4" ScaleY="0.9"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
                         </StackPanel>
-                        <TextBlock x:Name="LocalIpText" FontSize="13"
-                                   Foreground="{ThemeResource PhoneSubtleBrush}"
-                                   Margin="20,3,0,0"/>
+                        <TextBlock x:Name="ServerStatusText" Text="listo para recibir"
+                                   FontSize="14" Foreground="#FF1BA1E2"
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
-                </Grid>
-                <TextBlock x:Name="DeviceAliasDisplay" Text=""
-                           FontSize="28" FontWeight="Light"
-                           HorizontalAlignment="Center" Margin="0,8,0,2"
-                           TextWrapping="Wrap" TextAlignment="Center"/>
-                <TextBlock x:Name="DeviceModelDisplay" Text=""
-                           Foreground="{ThemeResource PhoneSubtleBrush}"
-                           FontSize="14" HorizontalAlignment="Center"
-                           Margin="0,0,0,16"/>
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Button x:Name="HistoryBtn" Content="" HorizontalAlignment="Stretch"
-                            Margin="0,0,4,0" Click="HistoryButton_Click"/>
-                    <Button x:Name="AboutBtn" Grid.Column="1" Content=""
-                            HorizontalAlignment="Stretch" Margin="4,0,0,0"
-                            Click="AboutButton_Click"/>
-                </Grid>
-                <TextBlock x:Name="ReceivedFilesLabel" Text="" FontSize="17"
-                           FontWeight="SemiBold" Margin="0,0,0,6"/>
-                <TextBlock x:Name="NoReceivedFilesText" Text=""
-                           Foreground="{ThemeResource PhoneSubtleBrush}"
-                           FontSize="14" FontStyle="Italic"/>
-                <ListView x:Name="ReceivedFilesList" MaxHeight="300" SelectionMode="None">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="0,3,0,3">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding FileName}" FontSize="14"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Grid.Column="1" Text="{Binding SizeText}"
-                                           Foreground="{ThemeResource PhoneSubtleBrush}"
-                                           FontSize="12.5"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-                <StackPanel x:Name="ReceiveProgressPanel" Visibility="Collapsed" Margin="0,8,0,0">
-                    <Grid Background="{ThemeResource PhoneChromeBrush}">
-                        <StackPanel Margin="14">
-                            <TextBlock x:Name="ReceiveProgressTitle" Text=""
-                                       FontSize="15" FontWeight="SemiBold"/>
-                            <ProgressBar x:Name="ReceiveProgressBar" Minimum="0" Maximum="100"
-                                         Value="0" Margin="0,6,0,3"/>
-                            <TextBlock x:Name="ReceiveProgressText" FontSize="13"
+
+                    <!-- Hero: device name -->
+                    <TextBlock x:Name="DeviceAliasDisplay" Text="Windows Phone"
+                               FontSize="40" FontWeight="Light"
+                               Foreground="{ThemeResource PhoneForegroundBrush}"
+                               LineHeight="44" TextWrapping="Wrap" MaxHeight="92"/>
+                    <TextBlock x:Name="DeviceModelDisplay" Text=""
+                               FontSize="15" FontWeight="Light"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,2,0,14"/>
+
+                    <!-- Network line: dot + IP:port -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                        <Ellipse x:Name="StatusDot" Width="6" Height="6"
+                                 Fill="#FF1BA1E2" VerticalAlignment="Center"
+                                 Margin="0,0,6,0"/>
+                        <TextBlock x:Name="LocalIpText" Text=""
+                                   FontSize="13"
+                                   Foreground="{ThemeResource PhoneSubtleBrush}"
+                                   VerticalAlignment="Center"
+                                   IsTextSelectionEnabled="True"/>
+                    </StackPanel>
+
+                    <!-- Stats row: received | total | nearby -->
+                    <Grid Margin="0,0,0,24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock x:Name="ReceivedCountText" Text="0"
+                                       FontSize="28" FontWeight="Light"
+                                       Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                            <TextBlock x:Name="ReceivedStatLabel" Text="recibidos"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock x:Name="TotalBytesText" Text="0 KB"
+                                       FontSize="28" FontWeight="Light"
+                                       Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                            <TextBlock x:Name="TotalStatLabel" Text="total" FontSize="12"
+                                       Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock x:Name="NearbyCountText" Text="0"
+                                       FontSize="28" FontWeight="Light"
+                                       Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                            <TextBlock x:Name="NearbyStatLabel" Text="cercanos"
+                                       FontSize="12"
                                        Foreground="{ThemeResource PhoneSubtleBrush}"/>
                         </StackPanel>
                     </Grid>
+
+                    <!-- Tile row: Address | Historial | Acerca -->
+                    <Grid Margin="0,0,0,28">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border x:Name="AddressTile" Grid.Column="0"
+                                Background="#FF1BA1E2" Height="88"
+                                Tapped="AddressTile_Tapped">
+                            <StackPanel Margin="12" VerticalAlignment="Bottom">
+                                <TextBlock Text="&#xE128;" FontFamily="Segoe UI Symbol"
+                                           FontSize="20" Foreground="White"/>
+                                <TextBlock x:Name="AddressTileLabel" Text="ip"
+                                           FontSize="13" Foreground="White"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="HistoryBtn" Grid.Column="2"
+                                Background="{ThemeResource PhoneChromeBrush}"
+                                Height="88" Tapped="HistoryTile_Tapped">
+                            <StackPanel Margin="12" VerticalAlignment="Bottom">
+                                <TextBlock Text="&#xE121;" FontFamily="Segoe UI Symbol"
+                                           FontSize="20"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                                <TextBlock x:Name="HistoryTileLabel" Text="historial"
+                                           FontSize="13"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="AboutBtn" Grid.Column="4"
+                                Background="{ThemeResource PhoneChromeBrush}"
+                                Height="88" Tapped="AboutTile_Tapped">
+                            <StackPanel Margin="12" VerticalAlignment="Bottom">
+                                <TextBlock Text="&#xE11B;" FontFamily="Segoe UI Symbol"
+                                           FontSize="20"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                                <TextBlock x:Name="AboutTileLabel" Text="acerca"
+                                           FontSize="13"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"
+                                           Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Recent received header + history link -->
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="ReceivedFilesLabel" Text="archivos recibidos"
+                                   FontSize="15"
+                                   Foreground="{ThemeResource PhoneSubtleBrush}"
+                                   VerticalAlignment="Center"/>
+                        <Button x:Name="HistoryLinkBtn" Grid.Column="1"
+                                Content="historial &#x2192;"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="#FF1BA1E2" FontSize="13"
+                                Padding="0" Margin="0"
+                                Click="HistoryButton_Click"/>
+                    </Grid>
+
+                    <!-- Empty state -->
+                    <StackPanel x:Name="EmptyReceivePanel" HorizontalAlignment="Center"
+                                Margin="0,24,0,0">
+                        <TextBlock x:Name="NoReceivedFilesText" Text="Esperando archivos..."
+                                   FontSize="15" FontWeight="Light"
+                                   Foreground="{ThemeResource PhoneSubtleBrush}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Received files list -->
+                    <ListView x:Name="ReceivedFilesList" SelectionMode="None"
+                              Visibility="Collapsed">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0,0,0,4"/>
+                                <Setter Property="MinHeight" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Background="{ThemeResource PhoneChromeBrush}"
+                                      MinHeight="56">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="3"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Rectangle Grid.Column="0" Fill="#FF1BA1E2"/>
+                                    <StackPanel Grid.Column="1" Margin="12,10,12,10">
+                                        <TextBlock Text="{Binding FileName}" FontSize="14"
+                                                   Foreground="{ThemeResource PhoneForegroundBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding SizeText}" FontSize="12"
+                                                   Foreground="{ThemeResource PhoneSubtleBrush}"
+                                                   Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <!-- Incoming transfer progress panel -->
+                    <Border x:Name="ReceiveProgressPanel" Visibility="Collapsed"
+                            Background="{ThemeResource PhoneChromeBrush}"
+                            Padding="14" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock x:Name="ReceiveProgressTitle" Text=""
+                                       FontSize="13" Foreground="#FF1BA1E2"
+                                       Margin="0,0,0,10"/>
+                            <ProgressBar x:Name="ReceiveProgressBar"
+                                         Minimum="0" Maximum="100" Value="0"
+                                         Foreground="#FF1BA1E2" Margin="0,0,0,6"/>
+                            <TextBlock x:Name="ReceiveProgressText" Text=""
+                                       FontSize="12"
+                                       Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                        </StackPanel>
+                    </Border>
+
                 </StackPanel>
-            </StackPanel>
+            </ScrollViewer>
         </PivotItem>
 
-        <!-- TAB 2: ENVIAR -->
+        <!-- ═══════════════════════════════════════════════
+             TAB 2: ENVIAR
+        ═══════════════════════════════════════════════ -->
         <PivotItem x:Name="Tab2Header" Header="enviar">
-            <Grid Margin="0,8,0,0">
+            <Grid Margin="0,10,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -88,224 +292,652 @@
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <Grid Background="{ThemeResource PhoneChromeBrush}">
-                    <Grid Margin="12">
+
+                <!-- File selector card -->
+                <Grid Grid.Row="0" Background="{ThemeResource PhoneChromeBrush}"
+                      MinHeight="68">
+                    <Grid Margin="16,12,14,12">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="SelectedFilesText" Text=""
-                                   FontSize="14.5" VerticalAlignment="Center"/>
-                        <Button Grid.Column="1" Content="+" FontSize="20"
-                                MinWidth="48" Click="PickFilesButton_Click"/>
+                        <Button x:Name="PickFilesButton"
+                                Grid.Column="0"
+                                Background="#FF1BA1E2"
+                                Foreground="White"
+                                Width="42" Height="42"
+                                MinWidth="0"
+                                Padding="0"
+                                BorderThickness="0"
+                                Content="+"
+                                FontSize="26"
+                                FontWeight="Light"
+                                Click="PickFilesButton_Click"/>
+                        <StackPanel Grid.Column="1"
+                                    Margin="14,0,0,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock x:Name="SelectedFilesText"
+                                       Text="Sin archivos seleccionados"
+                                       FontSize="14"
+                                       Foreground="{ThemeResource PhoneForegroundBrush}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="PickerHintText"
+                                       Text="fotos · videos · música · archivos"
+                                       FontSize="11.5"
+                                       Foreground="{ThemeResource PhoneSubtleBrush}"
+                                       Margin="0,3,0,0"/>
+                        </StackPanel>
                     </Grid>
                 </Grid>
-                <Grid Grid.Row="1" Margin="0,8,0,0">
+
+                <!-- Text message bar -->
+                <Grid Grid.Row="1" Background="{ThemeResource PhoneChromeBrush}"
+                      Height="52" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="52"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox x:Name="TextMessageBox" PlaceholderText=""
+                    <TextBox x:Name="TextMessageBox" PlaceholderText="Mensaje de texto..."
+                             Background="Transparent" BorderThickness="0"
+                             Height="52" MinHeight="0"
+                             VerticalAlignment="Stretch"
+                             VerticalContentAlignment="Center"
+                             FontSize="13" Padding="12,0"
                              TextChanged="TextMessageBox_TextChanged"/>
                     <Button x:Name="SendTextButton" Grid.Column="1"
-                            Content=">" FontSize="18" MinWidth="48"
-                            IsEnabled="False" Click="SendTextButton_Click"/>
+                            Background="Transparent" BorderThickness="0"
+                            Padding="0" Width="52" Height="52" MinWidth="0"
+                            IsEnabled="False"
+                            Click="SendTextButton_Click">
+                        <TextBlock Text="&#xE111;" FontFamily="Segoe UI Symbol"
+                                   FontSize="13"
+                                   Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                    </Button>
                 </Grid>
-                <Grid Grid.Row="2" Margin="0,12,0,6">
+
+                <!-- Section header: nearby devices -->
+                <Grid Grid.Row="2" Margin="0,22,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="34"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="NearbyDevicesLabel" Text="" FontSize="17"
-                               FontWeight="SemiBold"/>
-                    <TextBlock x:Name="DeviceCountText" Grid.Column="1" Text=""
-                               Foreground="{ThemeResource PhoneSubtleBrush}"
-                               FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <Button x:Name="RefreshButton" Grid.Column="2"
-                            Content="" MinWidth="44" Padding="8,4"
-                            Click="RefreshButton_Click"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="NearbyDevicesLabel" Text="dispositivos cercanos"
+                                   FontSize="12"
+                                   CharacterSpacing="220"
+                                   Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                        <TextBlock x:Name="DeviceCountText" Text=""
+                                   FontSize="12"
+                                   CharacterSpacing="160"
+                                   Foreground="{ThemeResource PhoneForegroundBrush}"
+                                   Margin="8,0,0,0"/>
+                    </StackPanel>
+
+                    <Button x:Name="DeviceSelectionModeButton"
+                            Grid.Column="1"
+                            Height="26"
+                            MinWidth="0"
+                            Padding="10,0"
+                            BorderThickness="1"
+                            Click="DeviceSelectionModeButton_Click">
+                        <TextBlock x:Name="DeviceSelectionModeText"
+                                   Text="INDIVIDUAL"
+                                   FontSize="10.5"
+                                   CharacterSpacing="180"
+                                   VerticalAlignment="Center"/>
+                    </Button>
+
+                    <Button x:Name="RefreshButton" Grid.Column="3"
+                            Width="34" Height="26" MinWidth="0"
+                            Padding="0" Click="RefreshButton_Click">
+                        <TextBlock Text="&#xE149;" FontFamily="Segoe UI Symbol"
+                                   FontSize="13"/>
+                    </Button>
                 </Grid>
-                <ListView x:Name="DevicesList" Grid.Row="3"
+
+                <!-- Device grid — 2-column tiles -->
+                <GridView x:Name="DevicesList" Grid.Row="3"
                           SelectionMode="Single"
-                          SelectionChanged="DevicesList_SelectionChanged">
-                    <ListView.ItemTemplate>
+                          SelectionChanged="DevicesList_SelectionChanged"
+                          SizeChanged="DevicesList_SizeChanged">
+                    <GridView.ItemContainerStyle>
+                        <Style TargetType="GridViewItem">
+                            <Setter Property="Margin" Value="0,0,6,6"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </GridView.ItemContainerStyle>
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal"
+                                          MaximumRowsOrColumns="2"
+                                          ItemHeight="102"
+                                          ItemWidth="224"/>
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+                    <GridView.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,5,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Alias}" FontSize="16"
-                                               FontWeight="SemiBold"/>
-                                    <TextBlock Foreground="{ThemeResource PhoneSubtleBrush}"
-                                               FontSize="12.5">
-                                        <Run Text="{Binding DeviceModel}"/>
-                                        <Run Text=" · "/>
-                                        <Run Text="{Binding ProtocolLabel}"/>
-                                    </TextBlock>
+                            <Grid Height="96"
+                                  Background="{Binding TileColorHex, Converter={StaticResource HexToBrush}}">
+                                <TextBlock Text="{Binding DeviceIcon}"
+                                           FontFamily="Segoe UI Symbol"
+                                           FontSize="20"
+                                           Foreground="White"
+                                           Margin="12,10,0,0"
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Top"/>
+
+                                <StackPanel Margin="12,0,12,10" VerticalAlignment="Bottom">
+                                    <TextBlock Text="{Binding Alias}"
+                                               FontSize="14" FontWeight="SemiBold"
+                                               Foreground="White" LineHeight="17"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding DeviceModel}"
+                                               FontSize="11" Foreground="White"
+                                               Opacity="0.85"
+                                               TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
-                                <TextBlock Grid.Column="1" Text="{Binding IpAddress}"
-                                           Foreground="{ThemeResource PhoneSubtleBrush}"
-                                           FontSize="12" VerticalAlignment="Center"/>
                             </Grid>
                         </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-                <TextBlock x:Name="NoDevicesText" Grid.Row="3" Text=""
+                    </GridView.ItemTemplate>
+                </GridView>
+
+                <!-- No devices placeholder -->
+                <TextBlock x:Name="NoDevicesText" Grid.Row="3"
+                           Text="Buscando dispositivos..."
                            Foreground="{ThemeResource PhoneSubtleBrush}"
-                           FontSize="14" FontStyle="Italic"
-                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                <Button x:Name="SendButton" Grid.Row="4" Content=""
-                        HorizontalAlignment="Stretch" IsEnabled="False"
-                        Margin="0,6,0,4" Click="SendButton_Click"/>
+                           FontSize="15" FontWeight="Light"
+                           VerticalAlignment="Center" HorizontalAlignment="Center"
+                           Visibility="Collapsed"/>
+
+                <!-- Send button -->
+                <Button x:Name="SendButton" Grid.Row="4"
+                        HorizontalAlignment="Stretch"
+                        Background="#FF1BA1E2" Foreground="White"
+                        IsEnabled="False" Visibility="Collapsed"
+                        Height="44" Margin="0,10,0,16"
+                        FontSize="15" Content="enviar archivos"
+                        Click="SendButton_Click"/>
             </Grid>
         </PivotItem>
 
-        <!-- TAB 3: AJUSTES -->
+        <!-- ═══════════════════════════════════════════════
+             TAB 3: AJUSTES
+        ═══════════════════════════════════════════════ -->
         <PivotItem x:Name="Tab3Header" Header="ajustes">
-            <ScrollViewer>
-                <StackPanel Margin="0,8,0,20">
-                    <TextBlock x:Name="DeviceSectionLabel" Text="" FontSize="13"
+            <ScrollViewer VerticalScrollBarVisibility="Hidden"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="0,4,0,24">
+
+                    <!-- Device -->
+                    <TextBlock x:Name="DeviceSectionLabel" Text="dispositivo"
+                               FontSize="15"
                                Foreground="{ThemeResource PhoneSubtleBrush}"
-                               FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <Grid Background="{ThemeResource PhoneChromeBrush}" Margin="0,0,0,16">
-                        <StackPanel Margin="14">
-                            <TextBlock x:Name="NameLabel" Text="" FontSize="14"
+                               Margin="0,0,0,6"/>
+                    <TextBlock x:Name="DeviceAliasSettings" Text="Windows Phone"
+                               FontSize="34" FontWeight="Light"
+                               Foreground="{ThemeResource PhoneForegroundBrush}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="DeviceModelText" Text=""
+                               FontSize="14" FontWeight="Light"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,2,0,12"/>
+                    <TextBox x:Name="AliasTextBox" PlaceholderText="Nombre del dispositivo"
+                             FontSize="16" Margin="0,0,0,20"
+                             LostFocus="AliasTextBox_LostFocus"/>
+
+                    <!-- Network -->
+                    <TextBlock x:Name="NetworkSectionLabel" Text="red"
+                               FontSize="15"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,0,0,8"/>
+                    <Border Background="{ThemeResource PhoneChromeBrush}"
+                            Padding="14,12" Margin="0,0,0,20">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="puerto" FontSize="14"
+                                           Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                                <TextBlock x:Name="PortLabel" Text="53317"
+                                           Grid.Column="1" FontSize="14"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="protocolo" FontSize="14"
+                                           Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                                <TextBlock x:Name="ProtocolLabel" Text="HTTP"
+                                           Grid.Column="1" FontSize="14"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                            </Grid>
+                            <TextBlock Text="huella" FontSize="14"
                                        Foreground="{ThemeResource PhoneSubtleBrush}"
                                        Margin="0,0,0,4"/>
-                            <TextBox x:Name="AliasTextBox" PlaceholderText=""
-                                     LostFocus="AliasTextBox_LostFocus"/>
-                            <TextBlock x:Name="ModelLabel" Text="" FontSize="14"
-                                       Foreground="{ThemeResource PhoneSubtleBrush}"
-                                       Margin="0,12,0,2"/>
-                            <TextBlock x:Name="DeviceModelText" FontSize="14.5"/>
+                            <TextBlock x:Name="FingerprintText" Text=""
+                                       FontSize="11"
+                                       Foreground="{ThemeResource PhoneForegroundBrush}"
+                                       TextWrapping="Wrap"
+                                       IsTextSelectionEnabled="True"/>
                         </StackPanel>
-                    </Grid>
-                    <TextBlock x:Name="NetworkSectionLabel" Text="" FontSize="13"
+                    </Border>
+
+                    <!-- App preferences -->
+                    <TextBlock x:Name="PrefsSectionLabel" Text="aplicación"
+                               FontSize="15"
                                Foreground="{ThemeResource PhoneSubtleBrush}"
-                               FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <Grid Background="{ThemeResource PhoneChromeBrush}" Margin="0,0,0,16">
-                        <StackPanel Margin="14">
-                            <TextBlock x:Name="PortLabel" FontSize="14"/>
-                            <TextBlock x:Name="ProtocolLabel" FontSize="14" Margin="0,4,0,0"/>
-                            <TextBlock Text="Fingerprint" FontSize="14"
-                                       Foreground="{ThemeResource PhoneSubtleBrush}"
-                                       Margin="0,8,0,2"/>
-                            <TextBlock x:Name="FingerprintText" FontSize="11"
-                                       TextWrapping="Wrap" IsTextSelectionEnabled="True"
-                                       Foreground="{ThemeResource PhoneSubtleBrush}"/>
-                        </StackPanel>
+                               Margin="0,0,0,4"/>
+                    <ToggleSwitch x:Name="QuickSaveToggle"
+                                  Header="Guardado rápido"
+                                  Toggled="QuickSaveToggle_Toggled"/>
+                    <ToggleSwitch x:Name="RequirePinToggle"
+                                  Header="Requerir PIN"
+                                  Toggled="RequirePinToggle_Toggled"/>
+                    <Grid x:Name="ReceivePinPanel"
+                          Visibility="Collapsed"
+                          Margin="0,-4,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="ReceivePinLabel"
+                                   Text="PIN"
+                                   FontSize="12"
+                                   CharacterSpacing="160"
+                                   Foreground="{ThemeResource PhoneSubtleBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock x:Name="ReceivePinText"
+                                   Grid.Column="1"
+                                   Text="000000"
+                                   FontSize="20"
+                                   FontWeight="Light"
+                                   CharacterSpacing="180"
+                                   Foreground="{ThemeResource PhoneForegroundBrush}"
+                                   VerticalAlignment="Center"
+                                   IsTextSelectionEnabled="True"/>
+                        <Button x:Name="RegeneratePinButton"
+                                Grid.Column="2"
+                                Content="nuevo"
+                                MinWidth="0"
+                                Height="30"
+                                Padding="10,0"
+                                FontSize="10.5"
+                                CharacterSpacing="120"
+                                Click="RegeneratePinButton_Click"/>
                     </Grid>
-                    <TextBlock x:Name="StorageSectionLabel" Text="" FontSize="13"
+                    <ToggleSwitch x:Name="AutostartToggle"
+                                  Header="Inicio automático"
+                                  Toggled="AutostartToggle_Toggled"/>
+
+                    <!-- Storage -->
+                    <TextBlock x:Name="StorageSectionLabel" Text="almacenamiento"
+                               FontSize="15"
                                Foreground="{ThemeResource PhoneSubtleBrush}"
-                               FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <Grid Background="{ThemeResource PhoneChromeBrush}" Margin="0,0,0,16">
-                        <StackPanel Margin="14">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="ImagesLabel" Text="" FontSize="14"
-                                           VerticalAlignment="Center"/>
-                                <Button x:Name="ImageDestButton" Grid.Column="1"
-                                        Content="" MinWidth="100"
-                                        Click="ImageDestButton_Click"/>
-                            </Grid>
-                            <TextBlock x:Name="ImagePathHint" FontSize="11.5"
-                                       Foreground="{ThemeResource PhoneSubtleBrush}"
-                                       TextTrimming="CharacterEllipsis" Margin="0,0,0,10"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="VideosLabel" Text="" FontSize="14"
-                                           VerticalAlignment="Center"/>
-                                <Button x:Name="VideoDestButton" Grid.Column="1"
-                                        Content="" MinWidth="100"
-                                        Click="VideoDestButton_Click"/>
-                            </Grid>
-                            <TextBlock x:Name="VideoPathHint" FontSize="11.5"
-                                       Foreground="{ThemeResource PhoneSubtleBrush}"
-                                       TextTrimming="CharacterEllipsis" Margin="0,0,0,10"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="AudioLabel" Text="" FontSize="14"
-                                           VerticalAlignment="Center"/>
-                                <Button x:Name="AudioDestButton" Grid.Column="1"
-                                        Content="" MinWidth="100"
-                                        Click="AudioDestButton_Click"/>
-                            </Grid>
-                            <TextBlock x:Name="AudioPathHint" FontSize="11.5"
-                                       Foreground="{ThemeResource PhoneSubtleBrush}"
-                                       TextTrimming="CharacterEllipsis" Margin="0,0,0,10"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="OtherFilesLabel" Text="" FontSize="14"
-                                           VerticalAlignment="Center"/>
-                                <Button x:Name="OtherDestButton" Grid.Column="1"
-                                        Content="" MinWidth="100"
-                                        Click="OtherDestButton_Click"/>
-                            </Grid>
-                            <TextBlock x:Name="OtherPathHint" FontSize="11.5"
-                                       Foreground="{ThemeResource PhoneSubtleBrush}"
-                                       TextTrimming="CharacterEllipsis" Margin="0,0,0,0"/>
-                            <Button x:Name="MigrateButton" HorizontalAlignment="Stretch"
-                                    Margin="0,10,0,0" Visibility="Collapsed"
-                                    Click="MigrateButton_Click"/>
-                            <ProgressBar x:Name="MigrateProgress" Minimum="0" Maximum="100"
-                                         Visibility="Collapsed" Margin="0,6,0,0"/>
-                            <TextBlock x:Name="MigrateStatusText" FontSize="12.5"
-                                       Foreground="{ThemeResource PhoneSubtleBrush}"
-                                       Visibility="Collapsed" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Grid>
-                    <TextBlock x:Name="LangSectionLabel" Text="" FontSize="13"
-                               Foreground="{ThemeResource PhoneSubtleBrush}"
-                               FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <Grid Background="{ThemeResource PhoneChromeBrush}" Margin="0,0,0,16">
-                        <Grid Margin="14">
+                               Margin="0,16,0,8"/>
+
+                    <Border Background="{ThemeResource PhoneChromeBrush}"
+                            Padding="14,10" Margin="0,0,0,4">
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Button x:Name="LangEsButton" Content="Español"
-                                    HorizontalAlignment="Stretch" Margin="0,0,4,0"
-                                    Click="LangEsButton_Click"/>
-                            <Button x:Name="LangEnButton" Grid.Column="1"
-                                    Content="English" HorizontalAlignment="Stretch"
-                                    Margin="4,0,0,0" Click="LangEnButton_Click"/>
-                        </Grid>
-                    </Grid>
-                    <TextBlock x:Name="AppSectionLabel" Text="APP" FontSize="13"
-                               Foreground="{ThemeResource PhoneSubtleBrush}"
-                               FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <Grid Background="{ThemeResource PhoneChromeBrush}">
-                        <Grid Margin="14">
-                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="LocalSend v1.0.1" FontSize="14"/>
-                                <TextBlock Text="Protocol v2.1" FontSize="12.5"
-                                           Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                            <TextBlock Text="&#xE158;" FontFamily="Segoe UI Symbol"
+                                       FontSize="18"
+                                       Foreground="{ThemeResource PhoneSubtleBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="ImagesLabel" Text="Imágenes"
+                                           FontSize="14"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                                <TextBlock x:Name="ImagePathHint" Text="" FontSize="11"
+                                           Foreground="{ThemeResource PhoneSubtleBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
-                            <Button x:Name="AboutBtn2" Grid.Column="1" Content=""
-                                    Click="AboutButton_Click"/>
+                            <Button x:Name="ImageDestButton" Grid.Column="2" Content=""
+                                    FontSize="11" Padding="8,4"
+                                    Click="ImageDestButton_Click"/>
                         </Grid>
+                    </Border>
+
+                    <Border Background="{ThemeResource PhoneChromeBrush}"
+                            Padding="14,10" Margin="0,0,0,4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE173;" FontFamily="Segoe UI Symbol"
+                                       FontSize="18"
+                                       Foreground="{ThemeResource PhoneSubtleBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="VideosLabel" Text="Videos"
+                                           FontSize="14"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                                <TextBlock x:Name="VideoPathHint" Text="" FontSize="11"
+                                           Foreground="{ThemeResource PhoneSubtleBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <Button x:Name="VideoDestButton" Grid.Column="2" Content=""
+                                    FontSize="11" Padding="8,4"
+                                    Click="VideoDestButton_Click"/>
+                        </Grid>
+                    </Border>
+
+                    <Border Background="{ThemeResource PhoneChromeBrush}"
+                            Padding="14,10" Margin="0,0,0,4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE189;" FontFamily="Segoe UI Symbol"
+                                       FontSize="18"
+                                       Foreground="{ThemeResource PhoneSubtleBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="AudioLabel" Text="Audio"
+                                           FontSize="14"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                                <TextBlock x:Name="AudioPathHint" Text="" FontSize="11"
+                                           Foreground="{ThemeResource PhoneSubtleBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <Button x:Name="AudioDestButton" Grid.Column="2" Content=""
+                                    FontSize="11" Padding="8,4"
+                                    Click="AudioDestButton_Click"/>
+                        </Grid>
+                    </Border>
+
+                    <Border Background="{ThemeResource PhoneChromeBrush}"
+                            Padding="14,10" Margin="0,0,0,4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE188;" FontFamily="Segoe UI Symbol"
+                                       FontSize="18"
+                                       Foreground="{ThemeResource PhoneSubtleBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="OtherFilesLabel" Text="Otros archivos"
+                                           FontSize="14"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                                <TextBlock x:Name="OtherPathHint" Text="" FontSize="11"
+                                           Foreground="{ThemeResource PhoneSubtleBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <Button x:Name="OtherDestButton" Grid.Column="2" Content=""
+                                    FontSize="11" Padding="8,4"
+                                    Click="OtherDestButton_Click"/>
+                        </Grid>
+                    </Border>
+
+                    <Button x:Name="MigrateButton" HorizontalAlignment="Stretch"
+                            Margin="0,8,0,0" Visibility="Collapsed"
+                            Background="#FF1BA1E2" Foreground="White"
+                            Click="MigrateButton_Click"/>
+                    <ProgressBar x:Name="MigrateProgress" Minimum="0" Maximum="100"
+                                 Visibility="Collapsed" Margin="0,6,0,0"
+                                 Foreground="#FF1BA1E2"/>
+                    <TextBlock x:Name="MigrateStatusText" Text="" FontSize="12"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Visibility="Collapsed" Margin="0,4,0,0"/>
+
+                    <!-- Language -->
+                    <TextBlock x:Name="LangSectionLabel" Text="idioma"
+                               FontSize="15"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,20,0,8"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="LangEsButton" Content="Español"
+                                Grid.Column="0" HorizontalAlignment="Stretch"
+                                Background="Transparent"
+                                BorderBrush="#FF1BA1E2"
+                                Foreground="#FF1BA1E2"
+                                FontSize="14" Padding="12"
+                                Click="LangEsButton_Click"/>
+                        <Button x:Name="LangEnButton" Content="English"
+                                Grid.Column="2" HorizontalAlignment="Stretch"
+                                Background="Transparent"
+                                BorderBrush="#FF1BA1E2"
+                                Foreground="#FF1BA1E2"
+                                FontSize="14" Padding="12"
+                                Click="LangEnButton_Click"/>
+                        <Button x:Name="LangRuButton" Content="Русский"
+                                Grid.Column="4" HorizontalAlignment="Stretch"
+                                Background="Transparent"
+                                BorderBrush="#FF1BA1E2"
+                                Foreground="#FF1BA1E2"
+                                FontSize="14" Padding="12"
+                                Click="LangRuButton_Click"/>
                     </Grid>
+
+                    <!-- About entry -->
+                    <Button x:Name="AboutBtn2" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Background="{ThemeResource PhoneChromeBrush}"
+                            BorderThickness="0" Padding="14" Margin="0,20,0,0"
+                            Click="AboutButton_Click">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="#FF1BA1E2" Width="40" Height="40">
+                                <TextBlock Text="&#xE11B;" FontFamily="Segoe UI Symbol"
+                                           FontSize="18" Foreground="White"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="14,0,0,0"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="LocalSend" FontSize="15"
+                                           Foreground="{ThemeResource PhoneForegroundBrush}"/>
+                                <TextBlock Text="v1.1.0 · Protocol v2.1"
+                                           FontSize="12"
+                                           Foreground="{ThemeResource PhoneSubtleBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+
                 </StackPanel>
             </ScrollViewer>
         </PivotItem>
-    </Pivot>
+
+        </Pivot>
+
+        <Border x:Name="ActiveTransferBanner"
+                Visibility="Collapsed"
+                VerticalAlignment="Bottom"
+                Margin="12,0,12,12"
+                Padding="12"
+                Background="#FF1BA1E2">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0"
+                            VerticalAlignment="Center">
+                    <TextBlock x:Name="ActiveTransferTitleText"
+                               Text="enviando"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="White"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="ActiveTransferDetailText"
+                               Text="a Secret Avocado - 0%"
+                               FontSize="11.5"
+                               Foreground="White"
+                               Opacity="0.85"
+                               TextTrimming="CharacterEllipsis"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <Button x:Name="RestoreTransferButton"
+                        Grid.Column="2"
+                        Content="MAXIMIZAR"
+                        MinWidth="0"
+                        Height="34"
+                        Padding="10,0"
+                        Background="Transparent"
+                        BorderBrush="White"
+                        Foreground="White"
+                        FontSize="10.5"
+                        CharacterSpacing="140"
+                        Click="RestoreTransferButton_Click"/>
+            </Grid>
+        </Border>
+
+        <Grid x:Name="IncomingRequestOverlay"
+              Visibility="Collapsed"
+              Background="{ThemeResource PhoneBackgroundBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ScrollViewer Grid.Row="0"
+                          VerticalScrollBarVisibility="Hidden"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="20,28,20,24">
+                    <TextBlock x:Name="IncomingRequestHeaderText"
+                               Text="RECIBIR · ACEPTAR"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               CharacterSpacing="220"
+                               Foreground="#FF1BA1E2"
+                               Margin="0,0,0,12"/>
+
+                    <TextBlock x:Name="IncomingRequestSenderNameText"
+                               Text="Secret Avocado"
+                               FontSize="46"
+                               FontWeight="Light"
+                               LineHeight="50"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{ThemeResource PhoneForegroundBrush}"/>
+
+                    <TextBlock x:Name="IncomingRequestSenderModelText"
+                               Text="iPhone 14 Pro"
+                               FontSize="14"
+                               FontStyle="Italic"
+                               Foreground="{ThemeResource PhoneSubtleBrush}"
+                               Margin="0,2,0,16"/>
+
+                    <TextBlock FontSize="13"
+                               Foreground="{ThemeResource PhoneForegroundBrush}"
+                               Margin="0,0,0,22">
+                        <Run x:Name="IncomingRequestSummaryPrefixRun" Text="quiere enviarte "/>
+                        <Run x:Name="IncomingRequestSummaryCountRun"
+                             Text="3 archivos"
+                             Foreground="#FF1BA1E2"/>
+                        <Run x:Name="IncomingRequestSummarySizeRun"
+                             Text=" · 30.0 MB"
+                             Foreground="{ThemeResource PhoneSubtleBrush}"/>
+                    </TextBlock>
+
+                    <ListView x:Name="IncomingRequestFilesList"
+                              SelectionMode="None">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="MinHeight" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{ThemeResource PhoneChromeBrush}"
+                                        BorderThickness="0,1,0,0">
+                                    <Grid MinHeight="61">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="32"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding FileIcon}"
+                                                   FontFamily="Segoe UI Symbol"
+                                                   FontSize="16"
+                                                   Foreground="{ThemeResource PhoneSubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,8,0,8">
+                                            <TextBlock Text="{Binding FileName}"
+                                                       FontSize="14"
+                                                       Foreground="{ThemeResource PhoneForegroundBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding SizeText}"
+                                                       FontSize="11"
+                                                       Foreground="{ThemeResource PhoneSubtleBrush}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Row="1" Margin="20,0,20,18" Height="48">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="IncomingRejectButton"
+                        Grid.Column="0"
+                        Content="RECHAZAR"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Background="Transparent"
+                        BorderBrush="{ThemeResource PhoneForegroundBrush}"
+                        Foreground="{ThemeResource PhoneForegroundBrush}"
+                        FontSize="12"
+                        CharacterSpacing="120"
+                        Click="IncomingRejectButton_Click"/>
+
+                <Button x:Name="IncomingAcceptButton"
+                        Grid.Column="2"
+                        Content="ACEPTAR"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Background="#FF1BA1E2"
+                        BorderBrush="#FF1BA1E2"
+                        Foreground="White"
+                        FontSize="12"
+                        CharacterSpacing="120"
+                        Click="IncomingAcceptButton_Click"/>
+            </Grid>
+        </Grid>
+    </Grid>
 </Page>

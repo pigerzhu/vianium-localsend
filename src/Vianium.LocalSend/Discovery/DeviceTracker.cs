@@ -44,6 +44,27 @@ namespace Vianium.LocalSend.Discovery
                 }
             }
         }
+
+        // Metro accent palette \u2014 deterministic per device alias
+        private static readonly string[] _tileColors =
+        {
+            "#FF1BA1E2", // cyan
+            "#FFA200FF", // violet
+            "#FF00A300", // green
+            "#FFFA6800", // orange
+            "#FFF472D0", // pink
+            "#FF825A2C", // brown
+            "#FF00ABA9", // teal
+        };
+
+        public string TileColorHex
+        {
+            get
+            {
+                int idx = Math.Abs((Alias ?? "").GetHashCode()) % _tileColors.Length;
+                return _tileColors[idx];
+            }
+        }
     }
 
     internal sealed class DeviceTracker

@@ -11,7 +11,7 @@ using Windows.Storage;
 namespace Vianium.LocalSend.Logging
 {
     /// <summary>
-    /// Static logging facade for Vianium.LocalSend.
+    /// Static logging facade for LocalSend.
     ///
     /// Architecture (modeled on the Vianium.Browser kernel logger): every
     /// call builds a single immutable <see cref="LogEntry"/> and fans it

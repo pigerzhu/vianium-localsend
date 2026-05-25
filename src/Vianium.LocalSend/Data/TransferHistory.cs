@@ -63,7 +63,25 @@ namespace Vianium.LocalSend.Data
             try
             {
                 var folder = ApplicationData.Current.LocalFolder;
-                var file = await folder.GetFileAsync(HistoryFileName);
+                StorageFile file = null;
+                var files = await folder.GetFilesAsync();
+                foreach (var candidate in files)
+                {
+                    if (candidate != null &&
+                        string.Equals(candidate.Name, HistoryFileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        file = candidate;
+                        break;
+                    }
+                }
+
+                if (file == null)
+                {
+                    _entries = new List<HistoryEntry>();
+                    AppLog.I(TAG, "History loaded: 0 entries");
+                    return _entries;
+                }
+
                 string content = await FileIO.ReadTextAsync(file);
 
                 JsonValue json;
@@ -79,7 +97,7 @@ namespace Vianium.LocalSend.Data
                         {
                             FileName = item.ContainsKey("f") ? item["f"].AsString() : "unknown",
                             FileSize = item.ContainsKey("s") ? item["s"].AsLong() : 0,
-                            SenderAlias = item.ContainsKey("a") ? item["a"].AsString() : "Unknown",
+                            SenderAlias = item.ContainsKey("a") ? item["a"].AsString() : S.UnknownDevice,
                             SenderModel = item.ContainsKey("m") ? item["m"].AsString() : "",
                             Timestamp = item.ContainsKey("t") ? DateTime.FromBinary(item["t"].AsLong()) : DateTime.MinValue,
                             SavedPath = item.ContainsKey("p") ? item["p"].AsString() : null,
@@ -124,7 +142,7 @@ namespace Vianium.LocalSend.Data
                     {
                         FileName = kvp.Value.File.FileName,
                         FileSize = kvp.Value.File.Size,
-                        SenderAlias = session.RemoteDevice != null ? session.RemoteDevice.Alias : "Unknown",
+                        SenderAlias = session.RemoteDevice != null ? session.RemoteDevice.Alias : S.UnknownDevice,
                         SenderModel = session.RemoteDevice != null ? session.RemoteDevice.DeviceModel : "",
                         Timestamp = DateTime.UtcNow,
                         SavedPath = kvp.Value.SavedPath,

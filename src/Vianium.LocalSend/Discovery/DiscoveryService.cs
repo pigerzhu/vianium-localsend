@@ -23,6 +23,8 @@ namespace Vianium.LocalSend.Discovery
         private DeviceInfo _localDevice;
         private CancellationTokenSource _announceCts;
         private bool _multicastFailed;
+        private bool _running;
+        private bool _networkStatusSubscribed;
 
         public DeviceTracker Tracker { get; private set; }
 
@@ -34,10 +36,10 @@ namespace Vianium.LocalSend.Discovery
 
         public async Task StartAsync()
         {
-            if (_socket != null) return;
+            if (_running) return;
+            _running = true;
 
-            // Listen for network changes
-            NetworkInformation.NetworkStatusChanged += OnNetworkStatusChanged;
+            EnsureNetworkStatusSubscribed();
 
             try
             {
@@ -55,12 +57,7 @@ namespace Vianium.LocalSend.Discovery
                 _multicastFailed = true;
 
                 // Dispose failed socket
-                if (_socket != null)
-                {
-                    _socket.MessageReceived -= OnMessageReceived;
-                    _socket.Dispose();
-                    _socket = null;
-                }
+                SafeDisposeSocket();
             }
 
             _announceCts = new CancellationTokenSource();
@@ -69,22 +66,69 @@ namespace Vianium.LocalSend.Discovery
 
         public void Stop()
         {
-            NetworkInformation.NetworkStatusChanged -= OnNetworkStatusChanged;
+            if (!_running && _socket == null && _announceCts == null) return;
+            _running = false;
+
+            SafeUnsubscribeNetworkStatus();
 
             if (_announceCts != null)
             {
-                _announceCts.Cancel();
+                try { _announceCts.Cancel(); } catch { }
+                try { _announceCts.Dispose(); } catch { }
                 _announceCts = null;
             }
 
-            if (_socket != null)
-            {
-                _socket.MessageReceived -= OnMessageReceived;
-                _socket.Dispose();
-                _socket = null;
-            }
+            SafeDisposeSocket();
 
             AppLog.I(TAG, "Discovery stopped");
+        }
+
+        private void EnsureNetworkStatusSubscribed()
+        {
+            if (_networkStatusSubscribed) return;
+
+            NetworkInformation.NetworkStatusChanged += OnNetworkStatusChanged;
+            _networkStatusSubscribed = true;
+        }
+
+        private void SafeUnsubscribeNetworkStatus()
+        {
+            if (!_networkStatusSubscribed) return;
+
+            try
+            {
+                NetworkInformation.NetworkStatusChanged -= OnNetworkStatusChanged;
+            }
+            catch (Exception ex)
+            {
+                AppLog.W(TAG, "Ignoring network event detach error: " + ex.Message);
+            }
+            _networkStatusSubscribed = false;
+        }
+
+        private void SafeDisposeSocket()
+        {
+            var socket = _socket;
+            _socket = null;
+            if (socket == null) return;
+
+            try
+            {
+                socket.MessageReceived -= OnMessageReceived;
+            }
+            catch (Exception ex)
+            {
+                AppLog.W(TAG, "Ignoring UDP event detach error: " + ex.Message);
+            }
+
+            try
+            {
+                socket.Dispose();
+            }
+            catch (Exception ex)
+            {
+                AppLog.W(TAG, "Ignoring UDP dispose error: " + ex.Message);
+            }
         }
 
         public async Task SendAnnouncementAsync()
@@ -361,17 +405,14 @@ namespace Vianium.LocalSend.Discovery
 
         private async void OnNetworkStatusChanged(object sender)
         {
+            if (!_running) return;
+
             AppLog.I(TAG, "Network status changed — restarting discovery");
 
             try
             {
                 // Restart socket on new network
-                if (_socket != null)
-                {
-                    _socket.MessageReceived -= OnMessageReceived;
-                    _socket.Dispose();
-                    _socket = null;
-                }
+                SafeDisposeSocket();
 
                 _multicastFailed = false;
 
@@ -387,12 +428,7 @@ namespace Vianium.LocalSend.Discovery
                 {
                     AppLog.I(TAG, "Multicast re-join failed: " + ex.Message);
                     _multicastFailed = true;
-                    if (_socket != null)
-                    {
-                        _socket.MessageReceived -= OnMessageReceived;
-                        _socket.Dispose();
-                        _socket = null;
-                    }
+                    SafeDisposeSocket();
                 }
 
                 // Clear stale devices from previous network
@@ -478,6 +514,7 @@ namespace Vianium.LocalSend.Discovery
         {
             try
             {
+                string loopback = null;
                 var hostNames = NetworkInformation.GetHostNames();
                 foreach (var host in hostNames)
                 {
@@ -488,8 +525,13 @@ namespace Vianium.LocalSend.Discovery
                         string ip = host.DisplayName;
                         if (ip != "127.0.0.1" && !ip.StartsWith("169.254."))
                             return ip;
+                        if (ip == "127.0.0.1")
+                            loopback = ip;
                     }
                 }
+
+                if (loopback != null)
+                    return loopback;
             }
             catch { }
             return "Unknown";

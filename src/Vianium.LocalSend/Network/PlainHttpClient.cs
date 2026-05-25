@@ -195,7 +195,7 @@ namespace Vianium.LocalSend.Network
             }
             sb.Append("\r\n");
             sb.Append("Connection: close\r\n");
-            sb.Append("User-Agent: Vianium.LocalSend/1.0\r\n");
+            sb.Append("User-Agent: LocalSend/1.1\r\n");
 
             if (contentLength > 0)
             {

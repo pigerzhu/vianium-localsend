@@ -291,9 +291,12 @@ namespace Vianium.LocalSend.Data
         {
             try
             {
-                var local = ApplicationData.Current.LocalFolder;
-                AppLog.I(TAG, "Legacy check: LocalFolder=" + local.Path);
-                var folder = await local.GetFolderAsync("LocalSend");
+                var folder = await TryGetLocalSendFolderAsync();
+                if (folder == null)
+                {
+                    AppLog.V(TAG, "Legacy check: no LocalSend folder");
+                    return 0;
+                }
                 AppLog.I(TAG, "Legacy folder found: " + folder.Path);
                 var files = await folder.GetFilesAsync();
                 AppLog.I(TAG, "Legacy files count: " + files.Count);
@@ -306,7 +309,7 @@ namespace Vianium.LocalSend.Data
             }
             catch (Exception ex)
             {
-                AppLog.I(TAG, "Legacy check: no folder or error — " + ex.Message);
+                AppLog.W(TAG, "Legacy check failed: " + ex.Message);
                 return 0;
             }
         }
@@ -322,8 +325,10 @@ namespace Vianium.LocalSend.Data
             StorageFolder oldFolder;
             try
             {
-                var local = ApplicationData.Current.LocalFolder;
-                oldFolder = await local.GetFolderAsync("LocalSend");
+                oldFolder = await TryGetLocalSendFolderAsync();
+                if (oldFolder == null)
+                    return result;
+
                 AppLog.I(TAG, "Migrate: old folder=" + oldFolder.Path);
             }
             catch (Exception ex)
@@ -391,6 +396,22 @@ namespace Vianium.LocalSend.Data
             catch { }
 
             return result;
+        }
+
+        private static async Task<StorageFolder> TryGetLocalSendFolderAsync()
+        {
+            var local = ApplicationData.Current.LocalFolder;
+            var folders = await local.GetFoldersAsync();
+            foreach (var folder in folders)
+            {
+                if (folder != null &&
+                    string.Equals(folder.Name, "LocalSend", StringComparison.OrdinalIgnoreCase))
+                {
+                    return folder;
+                }
+            }
+
+            return null;
         }
 
         public class MigrationResult

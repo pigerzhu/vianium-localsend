@@ -237,7 +237,7 @@ namespace Vianium.LocalSend.Protocol
         /// </summary>
         public async Task SendFilesAsync(DiscoveredDevice target, List<FileDto> files,
             Dictionary<string, StorageFile> storageFiles, IProgress<TransferProgress> progress,
-            CancellationToken ct)
+            CancellationToken ct, TransferSession displaySession)
         {
             string host = target.IpAddress;
             int port = target.Info != null ? target.Info.Port : ProtocolConstants.Port;
@@ -249,14 +249,14 @@ namespace Vianium.LocalSend.Protocol
                 " ssl=" + _http.UseSsl);
 
             // Retry prepare-upload up to 2 times (device might be briefly unavailable)
-            TransferSession session = null;
+            TransferSession preparedSession = null;
             int maxRetries = 2;
             for (int attempt = 0; attempt <= maxRetries; attempt++)
             {
                 ct.ThrowIfCancellationRequested();
                 try
                 {
-                    session = await PrepareUploadAsync(host, port, files, ct);
+                    preparedSession = await PrepareUploadAsync(host, port, files, ct);
                     break;
                 }
                 catch (OperationCanceledException)
@@ -279,12 +279,13 @@ namespace Vianium.LocalSend.Protocol
                 }
             }
 
-            if (session == null)
+            if (preparedSession == null)
             {
                 AppLog.I(TAG, "Transfer was text-only or returned no content");
                 return;
             }
 
+            TransferSession session = MergePreparedSession(preparedSession, displaySession);
             session.State = TransferState.Transferring;
 
             int completed = 0;
@@ -332,6 +333,11 @@ namespace Vianium.LocalSend.Protocol
                     fileInfo.BytesTransferred = fileInfo.File.Size;
                     completed++;
                 }
+                catch (OperationCanceledException)
+                {
+                    fileInfo.Status = FileTransferStatus.Skipped;
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     fileInfo.Status = FileTransferStatus.Failed;
@@ -347,9 +353,43 @@ namespace Vianium.LocalSend.Protocol
             AppLog.I(TAG, "Transfer complete: " + completed + "/" + total + " files sent");
         }
 
+        private static TransferSession MergePreparedSession(
+            TransferSession preparedSession,
+            TransferSession displaySession)
+        {
+            if (displaySession == null)
+                return preparedSession;
+
+            displaySession.SessionId = preparedSession.SessionId;
+            displaySession.State = TransferState.Accepted;
+
+            foreach (var kvp in displaySession.Files)
+            {
+                FileTransferInfo preparedFile;
+                if (preparedSession.Files.TryGetValue(kvp.Key, out preparedFile))
+                {
+                    kvp.Value.Token = preparedFile.Token;
+                    kvp.Value.Status = FileTransferStatus.Queued;
+                }
+                else
+                {
+                    kvp.Value.Status = FileTransferStatus.Skipped;
+                }
+            }
+
+            return displaySession;
+        }
+
         /// <summary>
         /// Legacy overload for byte[] data (kept for backward compat).
         /// </summary>
+        public async Task SendFilesAsync(DiscoveredDevice target, List<FileDto> files,
+            Dictionary<string, StorageFile> storageFiles, IProgress<TransferProgress> progress,
+            CancellationToken ct)
+        {
+            await SendFilesAsync(target, files, storageFiles, progress, ct, null);
+        }
+
         public async Task SendFilesAsync(DiscoveredDevice target, List<FileDto> files,
             Dictionary<string, byte[]> fileData, IProgress<TransferProgress> progress,
             CancellationToken ct)
@@ -406,6 +446,11 @@ namespace Vianium.LocalSend.Protocol
                     fileInfo.Status = FileTransferStatus.Completed;
                     fileInfo.BytesTransferred = data.Length;
                     completed++;
+                }
+                catch (OperationCanceledException)
+                {
+                    fileInfo.Status = FileTransferStatus.Skipped;
+                    throw;
                 }
                 catch (Exception ex)
                 {

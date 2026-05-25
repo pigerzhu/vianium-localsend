@@ -12,6 +12,7 @@ using Windows.UI.Core;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Vianium.LocalSend.Converters;
@@ -26,25 +27,39 @@ namespace Vianium.LocalSend.Pages
     public sealed partial class MainPage : Page
     {
         private const string TAG = "MainPage";
+        private const int MaxReceivePreviewItems = 5;
 
         private DeviceInfo _localDevice;
         private DiscoveryService _discovery;
         private LocalSendServer _server;
         private LocalSendClient _client;
         private DispatcherTimer _refreshTimer;
+        private DispatcherTimer _incomingRequestTimer;
 
         private List<StorageFile> _selectedFiles;
         private List<ReceivedFileItem> _receivedFiles;
+        private TransferSession _pendingIncomingSession;
+        private TransferPageArgs _activeTransferArgs;
+        private int _receivedFileCount;
+        private long _totalBytesReceived;
         private bool _servicesStarted;
         private bool _sdAvailable;
         private bool _pickerInFlight;
+        private bool _sendToMultiple;
+        private bool _settingsLoading;
 
+        private static readonly SolidColorBrush BrushAccent =
+            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 27, 161, 226));
         private static readonly SolidColorBrush BrushGreen =
             new SolidColorBrush(Windows.UI.Color.FromArgb(255, 63, 185, 80));
         private static readonly SolidColorBrush BrushRed =
             new SolidColorBrush(Windows.UI.Color.FromArgb(255, 248, 81, 73));
         private static readonly SolidColorBrush BrushGray =
             new SolidColorBrush(Windows.UI.Color.FromArgb(255, 139, 148, 158));
+        private static readonly SolidColorBrush BrushTransparent =
+            new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+        private static readonly SolidColorBrush BrushWhite =
+            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 255, 255));
 
         public MainPage()
         {
@@ -52,12 +67,15 @@ namespace Vianium.LocalSend.Pages
             this.NavigationCacheMode = NavigationCacheMode.Required;
             _selectedFiles = new List<StorageFile>();
             _receivedFiles = new List<ReceivedFileItem>();
+            ApplyDeviceSelectionMode();
         }
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
             AppLog.V(TAG, "OnNavigatedTo — servicesStarted=" + _servicesStarted);
+
+            EqStoryboard.Begin();
 
             if (!_servicesStarted)
             {
@@ -66,18 +84,40 @@ namespace Vianium.LocalSend.Pages
                 string alias = DeviceInfo.GetSavedAlias() ?? "Windows Phone";
                 AliasTextBox.Text = alias;
                 DeviceAliasDisplay.Text = alias;
+                DeviceAliasSettings.Text = alias;
                 ServerStatusText.Text = S.Starting;
 
-                // Defer all networking to Low priority — page renders first
-                var ignore = Dispatcher.RunAsync(CoreDispatcherPriority.Low, async () =>
+                LoadPreferenceSettings();
+
+                if (IsAutostartEnabled())
                 {
-                    await InitializeServicesAsync();
-                });
+                    // Defer all networking to Low priority — page renders first
+                    var ignore = Dispatcher.RunAsync(CoreDispatcherPriority.Low, async () =>
+                    {
+                        await InitializeServicesAsync();
+                    });
+                }
+                else
+                {
+                    SetReceiverStoppedByPreference();
+                }
             }
             else
             {
-                StartRefreshTimer();
+                LoadPreferenceSettings();
+                if (IsAutostartEnabled())
+                {
+                    StartRefreshTimer();
+                }
+                else
+                {
+                    SuspendServices();
+                    SetReceiverStoppedByPreference();
+                }
             }
+
+            await LoadReceivedSummaryAsync();
+            UpdateActiveTransferBanner();
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -101,9 +141,9 @@ namespace Vianium.LocalSend.Pages
                 AliasTextBox.Text = _localDevice.Alias;
                 FingerprintText.Text = _localDevice.Fingerprint;
                 DeviceAliasDisplay.Text = _localDevice.Alias;
+                DeviceAliasSettings.Text = _localDevice.Alias;
                 DeviceModelDisplay.Text = _localDevice.DeviceModel ?? "";
                 DeviceModelText.Text = _localDevice.DeviceModel ?? "";
-                _sdAvailable = await StorageConfig.IsSdCardAvailableAsync();
                 RefreshStorageButtons();
 
                 // Create services (no I/O, fast)
@@ -132,7 +172,7 @@ namespace Vianium.LocalSend.Pages
                 AppLog.E(TAG, "Service initialization failed", ex);
                 try
                 {
-                    ServerStatusText.Text = "Error: " + ex.Message;
+                    ServerStatusText.Text = S.ServerErrorMessage(ex.Message);
                     StatusDot.Fill = BrushRed;
                 }
                 catch { }
@@ -145,15 +185,14 @@ namespace Vianium.LocalSend.Pages
             {
                 await _server.StartAsync();
                 string ip = DiscoveryService.GetLocalIpAddress();
-                ServerStatusText.Text = S.ListeningOn + ip + ":" + ProtocolConstants.Port;
-                LocalIpText.Text = ip;
-                StatusDot.Fill = BrushGreen;
+                LocalIpText.Text = FormatReceiveAddress(ip);
+                SetReadyToReceiveStatus();
                 AppLog.I(TAG, "Server listening on " + ip + ":" + ProtocolConstants.Port);
             }
             catch (Exception ex)
             {
                 AppLog.E("App", "Server failed", ex);
-                ServerStatusText.Text = "Error: " + ex.Message;
+                ServerStatusText.Text = S.ServerErrorMessage(ex.Message);
                 StatusDot.Fill = BrushRed;
             }
         }
@@ -183,15 +222,14 @@ namespace Vianium.LocalSend.Pages
                 await _server.StartAsync();
                 await _discovery.StartAsync();
                 string ip = DiscoveryService.GetLocalIpAddress();
-                ServerStatusText.Text = S.ListeningOn + ip + ":" + ProtocolConstants.Port;
-                LocalIpText.Text = ip;
-                StatusDot.Fill = BrushGreen;
+                LocalIpText.Text = FormatReceiveAddress(ip);
+                SetReadyToReceiveStatus();
                 AppLog.I(TAG, "Services resumed — listening on " + ip);
             }
             catch (Exception ex)
             {
                 AppLog.E(TAG, "Resume failed", ex);
-                ServerStatusText.Text = "Error al reanudar: " + ex.Message;
+                ServerStatusText.Text = S.ResumeErrorMessage(ex.Message);
             }
         }
 
@@ -204,6 +242,7 @@ namespace Vianium.LocalSend.Pages
                 StopRefreshTimer();
                 if (_server != null) _server.Stop();
                 if (_discovery != null) _discovery.Stop();
+                HideIncomingRequest();
                 ServerStatusText.Text = S.Suspended;
                 StatusDot.Fill = BrushGray;
                 AppLog.I(TAG, "Services suspended");
@@ -212,6 +251,20 @@ namespace Vianium.LocalSend.Pages
             {
                 AppLog.E(TAG, "SuspendServices failed", ex);
             }
+        }
+
+        private void SetReadyToReceiveStatus()
+        {
+            ServerStatusText.Text = S.ReadyToReceive;
+            StatusDot.Fill = BrushGreen;
+        }
+
+        private static string FormatReceiveAddress(string ip)
+        {
+            if (string.IsNullOrWhiteSpace(ip) || ip == "Unknown")
+                return "";
+
+            return ip + ":" + ProtocolConstants.Port;
         }
 
         #region Navigation
@@ -244,12 +297,15 @@ namespace Vianium.LocalSend.Pages
         {
             if (_discovery == null) return;
 
+            var selectedFingerprints = GetSelectedDeviceFingerprints();
             var devices = _discovery.Tracker.GetAll();
             DevicesList.ItemsSource = devices;
+            RestoreDeviceSelection(devices, selectedFingerprints);
 
             bool hasDevices = devices.Count > 0;
             NoDevicesText.Visibility = hasDevices ? Visibility.Collapsed : Visibility.Visible;
             DeviceCountText.Text = hasDevices ? devices.Count.ToString() : "";
+            NearbyCountText.Text = devices.Count.ToString();
         }
 
         private void StartRefreshTimer()
@@ -372,8 +428,8 @@ namespace Vianium.LocalSend.Pages
 
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
-            var selectedDevice = DevicesList.SelectedItem as DiscoveredDevice;
-            if (selectedDevice == null || _selectedFiles.Count == 0) return;
+            var selectedDevices = GetSelectedDevices();
+            if (selectedDevices.Count == 0 || _selectedFiles.Count == 0) return;
 
             // After a cold reactivation from the file picker, services
             // initialize on a background dispatcher. Don't let a fast tap
@@ -384,15 +440,40 @@ namespace Vianium.LocalSend.Pages
                 await ShowMessageAsync(S.SendError, S.Starting);
                 return;
             }
-            if (string.IsNullOrEmpty(selectedDevice.IpAddress))
-            {
-                AppLog.W(TAG, "Send tapped but device has no IP address — ignoring");
-                return;
-            }
-
             SendButton.IsEnabled = false;
+            try
+            {
+                foreach (var selectedDevice in selectedDevices)
+                {
+                    if (string.IsNullOrEmpty(selectedDevice.IpAddress))
+                    {
+                        AppLog.W(TAG, "Send skipped: device has no IP address");
+                        continue;
+                    }
+
+                    await SendFilesToDeviceAsync(selectedDevice);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                AppLog.I(TAG, "Send cancelled by user");
+            }
+            catch (Exception ex)
+            {
+                AppLog.E("App", "Send failed", ex);
+                await ShowMessageAsync(S.SendError, ex.Message);
+            }
+            finally
+            {
+                UpdateSendButtonState();
+            }
+        }
+
+        private async Task SendFilesToDeviceAsync(DiscoveredDevice selectedDevice)
+        {
             AppLog.I(TAG, "Send requested: " + _selectedFiles.Count + " file(s) to " +
                 selectedDevice.Alias + " at " + selectedDevice.IpAddress);
+
             TransferSession session = null;
 
             try
@@ -423,11 +504,16 @@ namespace Vianium.LocalSend.Pages
 
                 var cts = new CancellationTokenSource();
 
-                Frame.Navigate(typeof(TransferPage), new TransferPageArgs
+                var transferArgs = new TransferPageArgs
                 {
                     Session = session,
-                    CancellationSource = cts
-                });
+                    CancellationSource = cts,
+                    IsReceive = false,
+                    CancelAction = () => cts.Cancel(),
+                    DismissAction = () => ClearActiveTransfer(session)
+                };
+                SetActiveTransfer(transferArgs);
+                Frame.Navigate(typeof(TransferPage), transferArgs);
 
                 await _client.SendFilesAsync(selectedDevice, fileDtos, storageFiles,
                     new Progress<TransferProgress>(p =>
@@ -437,13 +523,13 @@ namespace Vianium.LocalSend.Pages
                             var transferPage = Frame.Content as TransferPage;
                             if (transferPage != null)
                                 transferPage.UpdateProgress();
+                            else
+                                UpdateActiveTransferBanner();
                         });
-                    }), cts.Token);
+                    }), cts.Token, session);
 
-                // Final UI update after transfer completes
                 session.State = session.HasErrors ? TransferState.Failed : TransferState.Completed;
 
-                // Save to history
                 await TransferHistory.AddSentFilesAsync(
                     selectedDevice.Alias, fileDtos);
 
@@ -452,16 +538,22 @@ namespace Vianium.LocalSend.Pages
                     var transferPage = Frame.Content as TransferPage;
                     if (transferPage != null)
                         transferPage.UpdateProgress();
+                    else
+                        UpdateActiveTransferBanner();
                 });
             }
             catch (OperationCanceledException)
             {
+                if (session != null) session.State = TransferState.Cancelled;
                 await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
                     var transferPage = Frame.Content as TransferPage;
                     if (transferPage != null)
                         transferPage.UpdateProgress();
+                    else
+                        UpdateActiveTransferBanner();
                 });
+                throw;
             }
             catch (Exception ex)
             {
@@ -472,12 +564,10 @@ namespace Vianium.LocalSend.Pages
                     var transferPage = Frame.Content as TransferPage;
                     if (transferPage != null)
                         transferPage.UpdateProgress();
+                    else
+                        UpdateActiveTransferBanner();
                 });
-                await ShowMessageAsync(S.SendError, ex.Message);
-            }
-            finally
-            {
-                SendButton.IsEnabled = true;
+                throw;
             }
         }
 
@@ -486,9 +576,109 @@ namespace Vianium.LocalSend.Pages
             // Gate on service readiness so the Send buttons can never be
             // tapped while _client / _server are still null.
             bool ready = _servicesStarted && _client != null;
-            bool hasDevice = DevicesList.SelectedItem != null;
-            SendButton.IsEnabled = ready && hasDevice && _selectedFiles.Count > 0;
+            bool hasDevice = GetSelectedDevices().Count > 0;
+            bool hasFiles = _selectedFiles.Count > 0;
+
+            SendButton.Visibility = hasFiles ? Visibility.Visible : Visibility.Collapsed;
+            SendButton.IsEnabled = ready && hasDevice && hasFiles;
             SendTextButton.IsEnabled = ready && hasDevice && !string.IsNullOrWhiteSpace(TextMessageBox.Text);
+        }
+
+        private List<DiscoveredDevice> GetSelectedDevices()
+        {
+            var selected = new List<DiscoveredDevice>();
+            if (DevicesList == null) return selected;
+
+            if (_sendToMultiple)
+            {
+                foreach (var item in DevicesList.SelectedItems)
+                {
+                    var device = item as DiscoveredDevice;
+                    if (device != null)
+                        selected.Add(device);
+                }
+            }
+            else
+            {
+                var device = DevicesList.SelectedItem as DiscoveredDevice;
+                if (device != null)
+                    selected.Add(device);
+            }
+
+            return selected;
+        }
+
+        private List<string> GetSelectedDeviceFingerprints()
+        {
+            var fingerprints = new List<string>();
+            var selected = GetSelectedDevices();
+            foreach (var device in selected)
+            {
+                if (device.Info != null && !string.IsNullOrEmpty(device.Info.Fingerprint))
+                    fingerprints.Add(device.Info.Fingerprint);
+            }
+            return fingerprints;
+        }
+
+        private void RestoreDeviceSelection(List<DiscoveredDevice> devices, List<string> fingerprints)
+        {
+            if (devices == null || fingerprints == null || fingerprints.Count == 0)
+                return;
+
+            foreach (var device in devices)
+            {
+                if (device.Info == null || string.IsNullOrEmpty(device.Info.Fingerprint))
+                    continue;
+                if (!fingerprints.Contains(device.Info.Fingerprint))
+                    continue;
+
+                if (_sendToMultiple)
+                {
+                    DevicesList.SelectedItems.Add(device);
+                }
+                else
+                {
+                    DevicesList.SelectedItem = device;
+                    break;
+                }
+            }
+        }
+
+        private void ApplyDeviceSelectionMode()
+        {
+            if (DevicesList != null)
+            {
+                var selected = GetSelectedDevices();
+                DevicesList.SelectionMode = _sendToMultiple
+                    ? ListViewSelectionMode.Multiple
+                    : ListViewSelectionMode.Single;
+
+                if (!_sendToMultiple && selected.Count > 0)
+                    DevicesList.SelectedItem = selected[0];
+            }
+
+            if (DeviceSelectionModeText != null)
+                DeviceSelectionModeText.Text = _sendToMultiple
+                    ? S.SelectionModeMultiple
+                    : S.SelectionModeSingle;
+
+            if (DeviceSelectionModeButton != null)
+            {
+                DeviceSelectionModeButton.Background = _sendToMultiple ? BrushAccent : BrushTransparent;
+                DeviceSelectionModeButton.BorderBrush = BrushAccent;
+                DeviceSelectionModeButton.Foreground = _sendToMultiple ? BrushWhite : BrushAccent;
+            }
+
+            if (DeviceSelectionModeText != null)
+                DeviceSelectionModeText.Foreground = _sendToMultiple ? BrushWhite : BrushAccent;
+
+            UpdateSendButtonState();
+        }
+
+        private void DeviceSelectionModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            _sendToMultiple = !_sendToMultiple;
+            ApplyDeviceSelectionMode();
         }
 
         #endregion
@@ -502,16 +692,33 @@ namespace Vianium.LocalSend.Pages
 
         private async void SendTextButton_Click(object sender, RoutedEventArgs e)
         {
-            var selectedDevice = DevicesList.SelectedItem as DiscoveredDevice;
+            var selectedDevices = GetSelectedDevices();
             string text = TextMessageBox.Text;
-            if (selectedDevice == null || string.IsNullOrWhiteSpace(text)) return;
+            if (selectedDevices.Count == 0 || string.IsNullOrWhiteSpace(text)) return;
 
             SendTextButton.IsEnabled = false;
             try
             {
-                await _client.SendTextAsync(selectedDevice, text, CancellationToken.None);
+                int sentCount = 0;
+                string firstSentAlias = null;
+                foreach (var selectedDevice in selectedDevices)
+                {
+                    if (string.IsNullOrEmpty(selectedDevice.IpAddress))
+                        continue;
+                    await _client.SendTextAsync(selectedDevice, text, CancellationToken.None);
+                    if (firstSentAlias == null)
+                        firstSentAlias = selectedDevice.Alias;
+                    sentCount++;
+                }
+
+                if (sentCount == 0)
+                    return;
+
                 TextMessageBox.Text = "";
-                await ShowMessageAsync(S.Sent, S.MessageSentTo(selectedDevice.Alias));
+                string message = sentCount == 1
+                    ? S.MessageSentTo(firstSentAlias)
+                    : S.MessageSentToDevices(sentCount);
+                await ShowMessageAsync(S.Sent, message);
             }
             catch (Exception ex)
             {
@@ -520,7 +727,7 @@ namespace Vianium.LocalSend.Pages
             }
             finally
             {
-                SendTextButton.IsEnabled = true;
+                UpdateSendButtonState();
             }
         }
 
@@ -528,53 +735,209 @@ namespace Vianium.LocalSend.Pages
 
         #region Receiving Files
 
+        private async Task LoadReceivedSummaryAsync()
+        {
+            try
+            {
+                var entries = await TransferHistory.LoadAsync();
+
+                _receivedFiles.Clear();
+                _receivedFileCount = 0;
+                _totalBytesReceived = 0;
+
+                foreach (var entry in entries)
+                {
+                    if (entry == null || entry.IsSent)
+                        continue;
+
+                    _receivedFileCount++;
+                    _totalBytesReceived += entry.FileSize;
+
+                    if (_receivedFiles.Count < MaxReceivePreviewItems)
+                    {
+                        _receivedFiles.Add(new ReceivedFileItem
+                        {
+                            FileName = entry.FileName,
+                            SizeText = entry.SizeText
+                        });
+                    }
+                }
+
+                RefreshReceivedSummaryUi();
+            }
+            catch (Exception ex)
+            {
+                AppLog.E(TAG, "Could not refresh received summary", ex);
+            }
+        }
+
+        private void RefreshReceivedSummaryUi()
+        {
+            ReceivedFilesList.ItemsSource = null;
+            ReceivedFilesList.ItemsSource = _receivedFiles;
+
+            bool hasFiles = _receivedFileCount > 0;
+            EmptyReceivePanel.Visibility = hasFiles ? Visibility.Collapsed : Visibility.Visible;
+            ReceivedFilesList.Visibility = _receivedFiles.Count > 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            ReceivedCountText.Text = _receivedFileCount.ToString();
+            TotalBytesText.Text = FileSizeConverter.Format(_totalBytesReceived);
+        }
+
+        private static string GetDeviceDisplayName(DeviceInfo device)
+        {
+            if (device != null && !string.IsNullOrWhiteSpace(device.Alias))
+                return device.Alias;
+
+            return S.UnknownDevice;
+        }
+
+        private void ShowIncomingRequest(TransferSession session)
+        {
+            if (session == null) return;
+
+            _pendingIncomingSession = session;
+
+            string senderName = GetDeviceDisplayName(session.RemoteDevice);
+            string senderModel = session.RemoteDevice != null
+                ? session.RemoteDevice.DeviceModel
+                : "";
+
+            IncomingRequestSenderNameText.Text = senderName;
+            IncomingRequestSenderModelText.Text = senderModel ?? "";
+            IncomingRequestSenderModelText.Visibility = string.IsNullOrWhiteSpace(senderModel)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            IncomingRequestFilesList.ItemsSource = BuildIncomingRequestFiles(session);
+
+            ApplyIncomingRequestStrings();
+
+            IncomingAcceptButton.IsEnabled = true;
+            IncomingRejectButton.IsEnabled = true;
+            ReceiveProgressPanel.Visibility = Visibility.Collapsed;
+            IncomingRequestOverlay.Visibility = Visibility.Visible;
+            StartIncomingRequestTimer();
+        }
+
+        private void ApplyIncomingRequestStrings()
+        {
+            IncomingRequestHeaderText.Text = S.ReceiveRequestHeader;
+            IncomingRequestSummaryPrefixRun.Text = S.WantsToSendYouPrefix;
+            IncomingRejectButton.Content = S.Decline.ToUpperInvariant();
+            IncomingAcceptButton.Content = S.Accept.ToUpperInvariant();
+
+            if (_pendingIncomingSession == null) return;
+
+            IncomingRequestSummaryCountRun.Text = S.FileCount(_pendingIncomingSession.TotalFiles);
+            IncomingRequestSummarySizeRun.Text = " \u00b7 " +
+                FileSizeConverter.Format(_pendingIncomingSession.TotalBytes);
+        }
+
+        private List<IncomingRequestFileItem> BuildIncomingRequestFiles(TransferSession session)
+        {
+            var items = new List<IncomingRequestFileItem>();
+            foreach (var file in session.Files.Values)
+            {
+                if (file == null || file.File == null)
+                    continue;
+
+                items.Add(new IncomingRequestFileItem
+                {
+                    FileIcon = GetFileIcon(file.File),
+                    FileName = file.File.FileName,
+                    SizeText = FileSizeConverter.Format(file.File.Size)
+                });
+            }
+
+            return items;
+        }
+
+        private static string GetFileIcon(FileDto file)
+        {
+            string fileType = file.FileType ?? "";
+            if (fileType.StartsWith("image/"))
+                return "\uE114";
+            if (fileType.StartsWith("video/"))
+                return "\uE116";
+            if (fileType.StartsWith("audio/"))
+                return "\uE189";
+
+            string name = file.FileName ?? "";
+            string lower = name.ToLowerInvariant();
+            if (lower.EndsWith(".jpg") || lower.EndsWith(".jpeg") ||
+                lower.EndsWith(".png") || lower.EndsWith(".gif") ||
+                lower.EndsWith(".bmp"))
+                return "\uE114";
+            if (lower.EndsWith(".mp4") || lower.EndsWith(".avi") ||
+                lower.EndsWith(".mkv") || lower.EndsWith(".mov"))
+                return "\uE116";
+
+            return "\uE160";
+        }
+
+        private void StartIncomingRequestTimer()
+        {
+            StopIncomingRequestTimer();
+
+            _incomingRequestTimer = new DispatcherTimer();
+            _incomingRequestTimer.Interval = TimeSpan.FromSeconds(58);
+            _incomingRequestTimer.Tick += IncomingRequestTimer_Tick;
+            _incomingRequestTimer.Start();
+        }
+
+        private void StopIncomingRequestTimer()
+        {
+            if (_incomingRequestTimer == null) return;
+
+            _incomingRequestTimer.Stop();
+            _incomingRequestTimer.Tick -= IncomingRequestTimer_Tick;
+            _incomingRequestTimer = null;
+        }
+
+        private void IncomingRequestTimer_Tick(object sender, object e)
+        {
+            StopIncomingRequestTimer();
+            if (_pendingIncomingSession != null)
+            {
+                AppLog.W(TAG, "Incoming request timed out in UI");
+                try { if (_server != null) _server.DeclineTransfer(); }
+                catch { }
+            }
+
+            HideIncomingRequest();
+        }
+
+        private void HideIncomingRequest()
+        {
+            StopIncomingRequestTimer();
+            IncomingRequestOverlay.Visibility = Visibility.Collapsed;
+            IncomingRequestFilesList.ItemsSource = null;
+            _pendingIncomingSession = null;
+        }
+
         private async void OnIncomingTransfer(TransferSession session)
         {
             AppLog.I("App", "OnIncomingTransfer: " + session.TotalFiles + " files from " +
                 (session.RemoteDevice != null ? session.RemoteDevice.Alias : "null"));
 
-            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 try
                 {
-                    // Show receive progress panel
-                    ReceiveProgressPanel.Visibility = Visibility.Visible;
-                    string senderName = session.RemoteDevice != null
-                        ? session.RemoteDevice.Alias : "Unknown";
-                    ReceiveProgressTitle.Text = S.RequestFrom(senderName);
-                    ReceiveProgressBar.Value = 0;
-                    ReceiveProgressText.Text = session.TotalFiles + " file(s), " +
-                        FileSizeConverter.Format(session.TotalBytes);
+                    if (IsQuickSaveEnabled())
+                    {
+                        AppLog.I(TAG, "QuickSave enabled - auto accepting incoming transfer");
+                        BeginReceiveTransfer(session);
+                        return;
+                    }
 
+                    ShowIncomingRequest(session);
                     MainPivot.SelectedIndex = 0;
-
-                    string sizeText = FileSizeConverter.Format(session.TotalBytes);
-
-                    var dialog = new MessageDialog(
-                        S.WantsToSend(senderName, session.TotalFiles, sizeText),
-                        S.IncomingTransfer);
-                    dialog.Commands.Add(new UICommand(S.Accept, cmd =>
-                    {
-                        _server.AcceptTransfer();
-                        ReceiveProgressTitle.Text = S.ReceivingFrom(senderName);
-                    }));
-                    dialog.Commands.Add(new UICommand(S.Decline, cmd =>
-                    {
-                        _server.DeclineTransfer();
-                        ReceiveProgressPanel.Visibility = Visibility.Collapsed;
-                    }));
-                    dialog.DefaultCommandIndex = 0;
-                    dialog.CancelCommandIndex = 1;
-
-                    await dialog.ShowAsync();
                 }
                 catch (Exception ex)
                 {
-                    // MessageDialog.ShowAsync throws if another dialog is
-                    // already on screen; an unhandled throw in this
-                    // async-void callback crashes the receiving device.
-                    // Decline so the sender is not left hanging.
-                    AppLog.E("App", "Incoming-transfer prompt failed", ex);
+                    AppLog.E("App", "Incoming-transfer view failed", ex);
                     try { if (_server != null) _server.DeclineTransfer(); }
                     catch { }
                 }
@@ -587,6 +950,13 @@ namespace Vianium.LocalSend.Pages
             {
                 try
                 {
+                    var transferPage = Frame.Content as TransferPage;
+                    if (transferPage != null)
+                    {
+                        transferPage.UpdateProgress();
+                        return;
+                    }
+
                     if (_server != null && _server.ActiveSession != null)
                     {
                         var session = _server.ActiveSession;
@@ -594,9 +964,12 @@ namespace Vianium.LocalSend.Pages
                             ? (session.TransferredBytes * 100.0 / session.TotalBytes)
                             : 0;
                         ReceiveProgressBar.Value = percent;
-                        ReceiveProgressText.Text = string.Format("{0}% — {1}/{2} archivos — {3}",
-                            (int)percent, session.CompletedFiles, session.TotalFiles,
+                        ReceiveProgressText.Text = S.ReceiveProgress(
+                            (int)percent,
+                            session.CompletedFiles,
+                            session.TotalFiles,
                             FileSizeConverter.Format(session.TransferredBytes));
+                        UpdateActiveTransferBanner();
                     }
                 }
                 catch (Exception ex)
@@ -604,6 +977,57 @@ namespace Vianium.LocalSend.Pages
                     AppLog.E("App", "Receive-progress UI update failed", ex);
                 }
             });
+        }
+
+        private void IncomingAcceptButton_Click(object sender, RoutedEventArgs e)
+        {
+            var session = _pendingIncomingSession;
+            if (session == null || _server == null)
+                return;
+
+            IncomingAcceptButton.IsEnabled = false;
+            IncomingRejectButton.IsEnabled = false;
+
+            BeginReceiveTransfer(session);
+        }
+
+        private void BeginReceiveTransfer(TransferSession session)
+        {
+            if (session == null || _server == null)
+                return;
+
+            HideIncomingRequest();
+            ReceiveProgressPanel.Visibility = Visibility.Collapsed;
+            var transferArgs = new TransferPageArgs
+            {
+                Session = session,
+                IsReceive = true,
+                CancelAction = () =>
+                {
+                    if (_server != null)
+                        _server.CancelTransfer();
+                },
+                DismissAction = () => ClearActiveTransfer(session)
+            };
+            SetActiveTransfer(transferArgs);
+            Frame.Navigate(typeof(TransferPage), transferArgs);
+            _server.AcceptTransfer();
+        }
+
+        private void IncomingRejectButton_Click(object sender, RoutedEventArgs e)
+        {
+            IncomingAcceptButton.IsEnabled = false;
+            IncomingRejectButton.IsEnabled = false;
+
+            try
+            {
+                if (_server != null)
+                    _server.DeclineTransfer();
+            }
+            catch { }
+
+            ReceiveProgressPanel.Visibility = Visibility.Collapsed;
+            HideIncomingRequest();
         }
 
         private async void OnTransferCompleted(TransferSession session)
@@ -623,47 +1047,140 @@ namespace Vianium.LocalSend.Pages
 
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
             {
-              try
-              {
-                // Update received files list
-                foreach (var kvp in session.Files)
+                try
                 {
-                    if (kvp.Value.Status == FileTransferStatus.Completed)
+                    await LoadReceivedSummaryAsync();
+
+                    var transferPage = Frame.Content as TransferPage;
+                    if (transferPage != null)
                     {
-                        _receivedFiles.Insert(0, new ReceivedFileItem
-                        {
-                            FileName = kvp.Value.File.FileName,
-                            SizeText = FileSizeConverter.Format(kvp.Value.File.Size)
-                        });
+                        transferPage.UpdateProgress();
+                        SetReadyToReceiveStatus();
+                        return;
                     }
+
+                    // Update progress panel
+                    ReceiveProgressBar.Value = 100;
+                    ReceiveProgressTitle.Text = session.HasErrors
+                        ? S.CompletedWithErrors
+                        : S.TransferComplete;
+                    ReceiveProgressText.Text = S.FilesReceived(session.CompletedFiles);
+                    UpdateActiveTransferBanner();
+
+                    // Restore server status
+                    SetReadyToReceiveStatus();
+
+                    string resultMsg = session.HasErrors
+                        ? S.FilesReceivedWithErrors(session.CompletedFiles)
+                        : S.FilesReceived(session.CompletedFiles);
+                    await ShowMessageAsync(S.TransferComplete, resultMsg);
                 }
-
-                ReceivedFilesList.ItemsSource = null;
-                ReceivedFilesList.ItemsSource = _receivedFiles;
-                NoReceivedFilesText.Visibility = _receivedFiles.Count > 0
-                    ? Visibility.Collapsed : Visibility.Visible;
-
-                // Update progress panel
-                ReceiveProgressBar.Value = 100;
-                ReceiveProgressTitle.Text = session.HasErrors
-                    ? S.CompletedWithErrors
-                    : S.TransferComplete;
-                ReceiveProgressText.Text = S.FilesReceived(session.CompletedFiles);
-
-                // Restore server status
-                string ip = DiscoveryService.GetLocalIpAddress();
-                ServerStatusText.Text = S.ListeningOn + ip + ":" + ProtocolConstants.Port;
-
-                string resultMsg = session.HasErrors
-                    ? S.FilesReceivedWithErrors(session.CompletedFiles)
-                    : S.FilesReceived(session.CompletedFiles);
-                await ShowMessageAsync(S.TransferComplete, resultMsg);
-              }
-              catch (Exception ex)
-              {
-                  AppLog.E("App", "Transfer-completed UI update failed", ex);
-              }
+                catch (Exception ex)
+                {
+                    AppLog.E("App", "Transfer-completed UI update failed", ex);
+                }
             });
+        }
+
+        private void SetActiveTransfer(TransferPageArgs args)
+        {
+            _activeTransferArgs = args;
+            UpdateActiveTransferBanner();
+        }
+
+        private void ClearActiveTransfer(TransferSession session)
+        {
+            if (_activeTransferArgs != null && _activeTransferArgs.Session == session)
+                _activeTransferArgs = null;
+
+            UpdateActiveTransferBanner();
+        }
+
+        private void RestoreTransferButton_Click(object sender, RoutedEventArgs e)
+        {
+            RestoreActiveTransfer();
+        }
+
+        private void RestoreActiveTransfer()
+        {
+            if (_activeTransferArgs == null || _activeTransferArgs.Session == null)
+            {
+                UpdateActiveTransferBanner();
+                return;
+            }
+
+            ActiveTransferBanner.Visibility = Visibility.Collapsed;
+            Frame.Navigate(typeof(TransferPage), _activeTransferArgs);
+        }
+
+        private void UpdateActiveTransferBanner()
+        {
+            if (ActiveTransferBanner == null)
+                return;
+
+            if (_activeTransferArgs == null || _activeTransferArgs.Session == null)
+            {
+                ActiveTransferBanner.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var transferPage = Frame.Content as TransferPage;
+            if (transferPage != null)
+            {
+                ActiveTransferBanner.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var session = _activeTransferArgs.Session;
+            ActiveTransferBanner.Visibility = Visibility.Visible;
+            ActiveTransferBanner.Background = GetActiveTransferBrush(session.State);
+            ActiveTransferTitleText.Text = GetActiveTransferTitle(session, _activeTransferArgs.IsReceive);
+            ActiveTransferDetailText.Text = GetActiveTransferDetail(session, _activeTransferArgs.IsReceive);
+            RestoreTransferButton.Content = S.Maximize.ToUpperInvariant();
+        }
+
+        private Brush GetActiveTransferBrush(TransferState state)
+        {
+            if (state == TransferState.Completed)
+                return BrushGreen;
+            if (state == TransferState.Failed)
+                return BrushRed;
+            if (state == TransferState.Cancelled)
+                return BrushGray;
+            return BrushAccent;
+        }
+
+        private string GetActiveTransferTitle(TransferSession session, bool isReceive)
+        {
+            if (session.State == TransferState.Completed)
+                return S.TransferCompleteTitle;
+            if (session.State == TransferState.Failed)
+                return S.TransferError.ToLowerInvariant();
+            if (session.State == TransferState.Cancelled)
+                return S.Cancelled.ToLowerInvariant();
+            return isReceive ? S.ReceivingTitle : S.SendingTitle;
+        }
+
+        private string GetActiveTransferDetail(TransferSession session, bool isReceive)
+        {
+            string peer = session.RemoteDevice != null &&
+                !string.IsNullOrWhiteSpace(session.RemoteDevice.Alias)
+                ? session.RemoteDevice.Alias
+                : S.UnknownDevice;
+            string peerLine = isReceive ? S.FromPeer(peer) : S.ToPeer(peer);
+
+            if (session.State == TransferState.Completed)
+            {
+                return peerLine + " - " +
+                    S.TransferSummary(session.TotalFiles, FileSizeConverter.Format(session.TotalBytes));
+            }
+
+            int percent = session.TotalBytes > 0
+                ? (int)Math.Min(100, session.TransferredBytes * 100 / session.TotalBytes)
+                : 0;
+
+            return peerLine + " - " + percent + "% - " +
+                S.FileCount(session.TotalFiles);
         }
 
         #endregion
@@ -678,6 +1195,7 @@ namespace Vianium.LocalSend.Pages
                 _localDevice.Alias = newAlias;
                 DeviceInfo.SaveAlias(newAlias);
                 DeviceAliasDisplay.Text = newAlias;
+                DeviceAliasSettings.Text = newAlias;
             }
         }
 
@@ -727,7 +1245,11 @@ namespace Vianium.LocalSend.Pages
         private void ImageDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("image"); }
         private void VideoDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("video"); }
         private void AudioDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("audio"); }
-        private void OtherDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("other"); }
+        private async void OtherDestButton_Click(object sender, RoutedEventArgs e)
+        {
+            _sdAvailable = await StorageConfig.IsSdCardAvailableAsync();
+            ToggleDestination("other");
+        }
 
         private async void CheckLegacyFiles()
         {
@@ -805,62 +1327,248 @@ namespace Vianium.LocalSend.Pages
             ApplyStrings();
         }
 
-        /// <summary>
-        /// Apply all localized strings to UI elements.
-        /// Called on startup and when language changes.
-        /// </summary>
+        private void LangRuButton_Click(object sender, RoutedEventArgs e)
+        {
+            S.SetLanguage("ru");
+            ApplyStrings();
+        }
+
         private void ApplyStrings()
         {
-            // Pivot headers
-            Tab1Header.Header = S.IsEnglish ? "receive" : "recibir";
-            Tab2Header.Header = S.IsEnglish ? "send" : "enviar";
-            Tab3Header.Header = S.IsEnglish ? "settings" : "ajustes";
+            // Pivot headers — lowercase, WP convention
+            Tab1Header.Header = S.ReceiveTab;
+            Tab2Header.Header = S.SendTab;
+            Tab3Header.Header = S.SettingsTab;
 
-            // Receive tab
-            HistoryBtn.Content = S.History;
-            AboutBtn.Content = S.About;
+            // Receive tab: tile labels use inner TextBlock names, not Button.Content.
+            HistoryTileLabel.Text = S.History;
+            AboutTileLabel.Text = S.About;
+            AddressTileLabel.Text = S.AddressTile;
+            HistoryLinkBtn.Content = S.History + " \u2192";
             ReceivedFilesLabel.Text = S.ReceivedFiles;
             NoReceivedFilesText.Text = S.WaitingForFiles;
+            ReceivedStatLabel.Text = S.ReceivedStat;
+            TotalStatLabel.Text = S.TotalStat;
+            NearbyStatLabel.Text = S.NearbyStat;
 
             // Send tab
-            SelectedFilesText.Text = S.NoFilesSelected;
+            SelectedFilesText.Text = _selectedFiles.Count > 0
+                ? S.FilesSelected(_selectedFiles.Count)
+                : S.NoFilesSelected;
+            PickerHintText.Text = S.PickerHint;
             TextMessageBox.PlaceholderText = S.TextMessagePlaceholder;
-            NearbyDevicesLabel.Text = S.NearbyDevices;
+            NearbyDevicesLabel.Text = S.NearbyDevices.ToUpperInvariant();
             NoDevicesText.Text = S.SearchingDevices;
-            RefreshButton.Content = S.Search;
             SendButton.Content = S.SendFiles;
+            ApplyDeviceSelectionMode();
 
-            // Settings tab
+            // Settings tab — lowercase section labels
             DeviceSectionLabel.Text = S.Device;
-            NameLabel.Text = S.Name;
             AliasTextBox.PlaceholderText = S.MyDevice;
-            ModelLabel.Text = S.Model;
             NetworkSectionLabel.Text = S.Network;
-            PortLabel.Text = S.Port + "53317";
-            ProtocolLabel.Text = S.Protocol + "HTTP";
+            PrefsSectionLabel.Text = S.AppSection;
+            QuickSaveToggle.Header = S.QuickSave;
+            RequirePinToggle.Header = S.RequirePin;
+            ReceivePinLabel.Text = S.PinCode;
+            RegeneratePinButton.Content = S.RegeneratePin;
+            AutostartToggle.Header = S.Autostart;
             StorageSectionLabel.Text = S.Storage;
             ImagesLabel.Text = S.Images;
             VideosLabel.Text = S.Videos;
             AudioLabel.Text = S.Audio;
             OtherFilesLabel.Text = S.OtherFiles;
             LangSectionLabel.Text = S.Language;
-            AboutBtn2.Content = S.About;
+            LangEsButton.Content = S.Spanish;
+            LangEnButton.Content = S.English;
+            LangRuButton.Content = S.Russian;
+            ApplyLanguageSelectionState(S.CurrentLanguageCode);
+            ApplyIncomingRequestStrings();
+            UpdatePinSettingsVisibility();
+            UpdateActiveTransferBanner();
 
-            // Server status — refresh with current language
-            if (_servicesStarted && _server != null)
-            {
-                string ip = DiscoveryService.GetLocalIpAddress();
-                ServerStatusText.Text = S.ListeningOn + ip + ":" + ProtocolConstants.Port;
-            }
+            // Server status
+            if (!IsAutostartEnabled())
+                ServerStatusText.Text = S.ReceiverStopped;
+            else if (_servicesStarted && _server != null)
+                ServerStatusText.Text = S.ReadyToReceive;
             else
-            {
                 ServerStatusText.Text = S.Starting;
-            }
 
             RefreshStorageButtons();
         }
 
+        private void ApplyLanguageSelectionState(string languageCode)
+        {
+            StyleLanguageButton(LangEsButton, languageCode == "es");
+            StyleLanguageButton(LangEnButton, languageCode == "en");
+            StyleLanguageButton(LangRuButton, languageCode == "ru");
+        }
+
+        private static void StyleLanguageButton(Button button, bool selected)
+        {
+            button.Background = selected ? BrushAccent : BrushTransparent;
+            button.BorderBrush = BrushAccent;
+            button.Foreground = selected ? BrushWhite : BrushAccent;
+            button.BorderThickness = new Thickness(1);
+        }
+
         #endregion
+
+        private async void AddressTile_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            string address = GetReceiveAddress();
+            if (string.IsNullOrWhiteSpace(address))
+            {
+                await ShowMessageAsync(S.ReceiveAddressTitle, S.ReceiveAddressUnavailable);
+                return;
+            }
+
+            AppLog.V(TAG, "Receive address shown: " + address);
+            await ShowMessageAsync(S.ReceiveAddressTitle, S.ReceiveAddressMessage(address));
+        }
+
+        private string GetReceiveAddress()
+        {
+            if (LocalIpText != null && !string.IsNullOrWhiteSpace(LocalIpText.Text))
+                return LocalIpText.Text;
+
+            string address = FormatReceiveAddress(DiscoveryService.GetLocalIpAddress());
+            if (LocalIpText != null)
+                LocalIpText.Text = address;
+            return address;
+        }
+
+        private void HistoryTile_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            AppLog.V(TAG, "Navigating to HistoryPage");
+            Frame.Navigate(typeof(HistoryPage));
+        }
+
+        private void AboutTile_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            AppLog.V(TAG, "Navigating to AboutPage");
+            Frame.Navigate(typeof(AboutPage));
+        }
+
+        private void DevicesList_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            var panel = DevicesList.ItemsPanelRoot as ItemsWrapGrid;
+            if (panel != null && e.NewSize.Width > 0)
+            {
+                double itemW = Math.Floor((e.NewSize.Width - 8) / 2.0);
+                panel.ItemWidth = itemW > 80 ? itemW : 80;
+            }
+        }
+
+        private void QuickSaveToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_settingsLoading) return;
+            AppPreferences.QuickSave = QuickSaveToggle.IsOn;
+            AppLog.V(TAG, "QuickSave=" + QuickSaveToggle.IsOn);
+        }
+
+        private void RequirePinToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_settingsLoading) return;
+
+            AppPreferences.RequirePin = RequirePinToggle.IsOn;
+            if (RequirePinToggle.IsOn)
+                AppPreferences.EnsureReceivePin();
+
+            UpdatePinSettingsVisibility();
+            AppLog.V(TAG, "RequirePin=" + RequirePinToggle.IsOn);
+        }
+
+        private async void AutostartToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_settingsLoading) return;
+
+            AppPreferences.Autostart = AutostartToggle.IsOn;
+            AppLog.V(TAG, "Autostart=" + AutostartToggle.IsOn);
+
+            if (AutostartToggle.IsOn)
+            {
+                await EnsureReceiverServicesAsync();
+            }
+            else
+            {
+                SuspendServices();
+                SetReceiverStoppedByPreference();
+            }
+        }
+
+        private void RegeneratePinButton_Click(object sender, RoutedEventArgs e)
+        {
+            AppPreferences.RegenerateReceivePin();
+            UpdatePinSettingsVisibility();
+            AppLog.I(TAG, "Receive PIN regenerated");
+        }
+
+        private void LoadPreferenceSettings()
+        {
+            _settingsLoading = true;
+            try
+            {
+                QuickSaveToggle.IsOn = AppPreferences.QuickSave;
+                RequirePinToggle.IsOn = AppPreferences.RequirePin;
+                AutostartToggle.IsOn = AppPreferences.Autostart;
+
+                if (RequirePinToggle.IsOn)
+                    AppPreferences.EnsureReceivePin();
+
+                UpdatePinSettingsVisibility();
+            }
+            finally
+            {
+                _settingsLoading = false;
+            }
+        }
+
+        private async Task EnsureReceiverServicesAsync()
+        {
+            ServerStatusText.Text = S.Starting;
+            StatusDot.Fill = BrushGray;
+
+            if (!_servicesStarted)
+                await InitializeServicesAsync();
+            else
+                await ResumeServicesAsync();
+
+            StartRefreshTimer();
+        }
+
+        private void SetReceiverStoppedByPreference()
+        {
+            StopRefreshTimer();
+            ServerStatusText.Text = S.ReceiverStopped;
+            StatusDot.Fill = BrushGray;
+            LocalIpText.Text = "";
+            NearbyCountText.Text = "0";
+            DeviceCountText.Text = "";
+            NoDevicesText.Text = S.ReceiverStopped;
+            NoDevicesText.Visibility = Visibility.Visible;
+            DevicesList.ItemsSource = null;
+        }
+
+        private void UpdatePinSettingsVisibility()
+        {
+            if (ReceivePinPanel == null || ReceivePinText == null)
+                return;
+
+            bool enabled = RequirePinToggle != null && RequirePinToggle.IsOn;
+            ReceivePinPanel.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+            ReceivePinText.Text = enabled ? AppPreferences.EnsureReceivePin() : "";
+        }
+
+        private static bool IsQuickSaveEnabled()
+        {
+            return AppPreferences.QuickSave;
+        }
+
+        private static bool IsAutostartEnabled()
+        {
+            return AppPreferences.Autostart;
+        }
 
         private async Task ShowMessageAsync(string title, string message)
         {
@@ -875,6 +1583,13 @@ namespace Vianium.LocalSend.Pages
 
     internal sealed class ReceivedFileItem
     {
+        public string FileName { get; set; }
+        public string SizeText { get; set; }
+    }
+
+    internal sealed class IncomingRequestFileItem
+    {
+        public string FileIcon { get; set; }
         public string FileName { get; set; }
         public string SizeText { get; set; }
     }

@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest" xmlns:m3="http://schemas.microsoft.com/appx/2014/manifest" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
-  <Identity Name="VianiumLocalSend" Publisher="CN=miche" Version="1.0.1.0" />
+  <Identity Name="LocalSend" Publisher="CN=miche" Version="1.1.0.0" />
   <mp:PhoneIdentity PhoneProductId="f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
-    <DisplayName>Vianium LocalSend</DisplayName>
+    <DisplayName>LocalSend</DisplayName>
     <PublisherDisplayName>Angel Careaga</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -16,7 +16,7 @@
   </Resources>
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="Vianium.LocalSend.App">
-      <m3:VisualElements DisplayName="Vianium LocalSend" Square150x150Logo="Assets\Logo.png" Square44x44Logo="Assets\SmallLogo.png" Description="Share files with nearby devices. Open source, cross-platform, no internet required." ForegroundText="light" BackgroundColor="#1a1a2e">
+      <m3:VisualElements DisplayName="LocalSend" Square150x150Logo="Assets\Logo.png" Square44x44Logo="Assets\SmallLogo.png" Description="Share files with nearby devices. Open source, cross-platform, no internet required." ForegroundText="light" BackgroundColor="#1a1a2e">
         <m3:DefaultTile Wide310x150Logo="Assets\WideLogo.png" Square71x71Logo="Assets\Square71x71Logo.png">
         </m3:DefaultTile>
         <m3:SplashScreen Image="Assets\SplashScreen.png" />

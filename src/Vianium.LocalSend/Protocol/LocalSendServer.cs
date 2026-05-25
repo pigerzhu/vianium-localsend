@@ -26,6 +26,8 @@ namespace Vianium.LocalSend.Protocol
         private readonly SemaphoreSlim _sessionLock = new SemaphoreSlim(1, 1);
 
         private const string TAG = "Server";
+        private const int StreamChunkSize = 64 * 1024;
+        private const int DiskFlushThreshold = 256 * 1024;
 
         public event Action<TransferSession> IncomingTransferRequested;
         public event Action<string, long, long> FileReceiveProgress;
@@ -257,6 +259,12 @@ namespace Vianium.LocalSend.Protocol
                     return ServerResponse.PreconditionFailed();
                 }
 
+                if (IsPinRequired() && !IsValidPin(req.GetQueryParam("pin")))
+                {
+                    AppLog.W(TAG, "PrepareUpload: missing or invalid PIN from " + senderInfo.Alias);
+                    return ServerResponse.Unauthorized("PIN required / Invalid PIN");
+                }
+
                 // Parse files
                 if (!json.ContainsKey("files") || !json["files"].IsObject)
                 {
@@ -376,7 +384,7 @@ namespace Vianium.LocalSend.Protocol
         }
 
         /// <summary>
-        /// Streaming upload handler — reads body in 8KB chunks directly to disk.
+        /// Streaming upload handler — reads body in bounded chunks directly to disk.
         /// Supports files of any size without running out of memory.
         /// </summary>
         private async Task<ServerResponse> HandleUploadStreaming(
@@ -418,6 +426,7 @@ namespace Vianium.LocalSend.Protocol
             if (fileInfo.Token != token)
                 return ServerResponse.Forbidden("Invalid token");
 
+            StorageFile file = null;
             try
             {
                 fileInfo.Status = FileTransferStatus.Transferring;
@@ -425,28 +434,39 @@ namespace Vianium.LocalSend.Protocol
                 string safeName = SanitizeFileName(fileInfo.File.FileName);
                 var receivedFolder = await StorageConfig.GetFolderForFileAsync(
                     fileInfo.File.FileType);
-                var file = await receivedFolder.CreateFileAsync(safeName,
+                file = await receivedFolder.CreateFileAsync(safeName,
                     CreationCollisionOption.GenerateUniqueName);
 
-                // Stream body directly to file in 8KB chunks
+                // Write the request body straight to the file stream. Avoid
+                // DataWriter here because it buffers bytes until StoreAsync.
                 long totalWritten = 0;
+                int pendingWriteBytes = 0;
                 using (var fileStream = await file.OpenAsync(FileAccessMode.ReadWrite))
-                using (var fileWriter = new DataWriter(fileStream))
+                using (var outputStream = fileStream.GetOutputStreamAt(0))
                 {
                     int remaining = contentLength;
                     while (remaining > 0)
                     {
-                        uint toRead = (uint)Math.Min(remaining, 8192);
+                        if (_activeSession == null || _activeSession.State == TransferState.Cancelled)
+                            throw new OperationCanceledException("Transfer cancelled");
+
+                        uint toRead = (uint)Math.Min(remaining, StreamChunkSize);
                         uint loaded = await bodyReader.LoadAsync(toRead);
                         if (loaded == 0)
                             throw new Exception("Connection closed during upload");
 
-                        byte[] chunk = new byte[loaded];
-                        bodyReader.ReadBytes(chunk);
-                        fileWriter.WriteBytes(chunk);
+                        IBuffer chunk = bodyReader.ReadBuffer(loaded);
+                        await outputStream.WriteAsync(chunk);
 
                         totalWritten += loaded;
+                        pendingWriteBytes += (int)loaded;
                         remaining -= (int)loaded;
+
+                        if (pendingWriteBytes >= DiskFlushThreshold)
+                        {
+                            await outputStream.FlushAsync();
+                            pendingWriteBytes = 0;
+                        }
 
                         // Report progress
                         fileInfo.BytesTransferred = totalWritten;
@@ -454,8 +474,9 @@ namespace Vianium.LocalSend.Protocol
                         if (progressHandler != null)
                             progressHandler(fileId, totalWritten, fileInfo.File.Size);
                     }
-                    await fileWriter.StoreAsync();
-                    await fileWriter.FlushAsync();
+
+                    if (pendingWriteBytes > 0)
+                        await outputStream.FlushAsync();
                 }
 
                 fileInfo.Status = FileTransferStatus.Completed;
@@ -463,7 +484,7 @@ namespace Vianium.LocalSend.Protocol
 
                 AppLog.I(TAG, "Received file: " + safeName + " (" + totalWritten + " bytes, streamed)");
 
-                if (_activeSession.AllFilesCompleted)
+                if (_activeSession != null && _activeSession.AllFilesCompleted)
                 {
                     _activeSession.State = _activeSession.HasErrors
                         ? TransferState.Failed
@@ -475,10 +496,28 @@ namespace Vianium.LocalSend.Protocol
 
                 return ServerResponse.Ok(new JsonObject());
             }
+            catch (OperationCanceledException ex)
+            {
+                fileInfo.Status = FileTransferStatus.Skipped;
+                AppLog.I(TAG, "Upload cancelled for " + fileInfo.File.FileName + ": " + ex.Message);
+                try
+                {
+                    if (file != null)
+                        await file.DeleteAsync(StorageDeleteOption.PermanentDelete);
+                }
+                catch { }
+                return ServerResponse.Forbidden("Transfer cancelled");
+            }
             catch (Exception ex)
             {
                 fileInfo.Status = FileTransferStatus.Failed;
                 fileInfo.ErrorMessage = ex.Message;
+                try
+                {
+                    if (file != null)
+                        await file.DeleteAsync(StorageDeleteOption.PermanentDelete);
+                }
+                catch { }
                 AppLog.I(TAG, "Upload error for " + fileInfo.File.FileName + ": " + ex.Message);
                 return ServerResponse.InternalError(ex.Message);
             }
@@ -543,6 +582,11 @@ namespace Vianium.LocalSend.Protocol
                 _approvalTcs.TrySetResult(false);
         }
 
+        public void CancelTransfer()
+        {
+            CancelActiveSession();
+        }
+
         private void CancelActiveSession()
         {
             if (_activeSession != null)
@@ -560,6 +604,18 @@ namespace Vianium.LocalSend.Protocol
         public TransferSession ActiveSession { get { return _activeSession; } }
 
         #endregion
+
+        private static bool IsPinRequired()
+        {
+            return AppPreferences.RequirePin;
+        }
+
+        private static bool IsValidPin(string providedPin)
+        {
+            string expectedPin = AppPreferences.EnsureReceivePin();
+            return !string.IsNullOrEmpty(expectedPin) &&
+                string.Equals(expectedPin, providedPin, StringComparison.Ordinal);
+        }
 
         private static string SanitizeFileName(string fileName)
         {

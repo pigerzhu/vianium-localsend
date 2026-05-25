@@ -22,7 +22,7 @@ namespace Vianium.LocalSend
             // Bring logging online before anything else, so a failure in
             // InitializeComponent or a static ctor is still captured.
             AppLog.Init();
-            AppLog.I(TAG, "Constructing — Vianium.LocalSend");
+            AppLog.I(TAG, "Constructing — LocalSend");
 
             this.InitializeComponent();
             this.Suspending += OnSuspending;

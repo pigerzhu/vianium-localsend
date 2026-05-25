@@ -2,12 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Angel Careaga <hello@angelcareaga.com>
 
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using Windows.System.Display;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Vianium.LocalSend.Converters;
 using Vianium.LocalSend.Logging;
@@ -19,10 +17,15 @@ namespace Vianium.LocalSend.Pages
     public sealed partial class TransferPage : Page
     {
         private const string TAG = "TransferPage";
+        private const double FallbackProgressWidth = 390;
 
         private TransferSession _session;
         private CancellationTokenSource _cts;
-        private bool _isComplete;
+        private Action _cancelAction;
+        private Action _dismissAction;
+        private bool _isReceive;
+        private bool _isTerminal;
+        private DateTime _startedAtUtc;
         private DisplayRequest _displayRequest;
 
         public TransferPage()
@@ -33,10 +36,39 @@ namespace Vianium.LocalSend.Pages
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+            RequestDisplayActive();
 
-            // Keep the screen awake for the whole transfer. If the device
-            // locks, WP 8.1 suspends — and can then terminate — the app
-            // mid-transfer, which users perceive and report as a crash.
+            var args = e.Parameter as TransferPageArgs;
+            if (args == null || args.Session == null)
+            {
+                AppLog.W(TAG, "Opened with no TransferPageArgs");
+                return;
+            }
+
+            _session = args.Session;
+            _cts = args.CancellationSource;
+            _cancelAction = args.CancelAction;
+            _dismissAction = args.DismissAction;
+            _isReceive = args.IsReceive;
+            _startedAtUtc = DateTime.UtcNow;
+
+            AppLog.I(TAG, "Opened - " + (_isReceive ? "receive" : "send") +
+                " " + _session.TotalFiles + " file(s)");
+
+            ApplyStaticStrings();
+            UpdateProgress();
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            if (_isTerminal && e.NavigationMode == NavigationMode.Back)
+                DismissTransfer();
+            ReleaseDisplayRequest();
+        }
+
+        private void RequestDisplayActive()
+        {
             try
             {
                 if (_displayRequest == null)
@@ -47,28 +79,10 @@ namespace Vianium.LocalSend.Pages
             {
                 AppLog.W(TAG, "DisplayRequest.RequestActive failed: " + ex.Message);
             }
-
-            var args = e.Parameter as TransferPageArgs;
-            if (args != null)
-            {
-                _session = args.Session;
-                _cts = args.CancellationSource;
-                AppLog.I(TAG, "Opened — " + (_session != null ? _session.TotalFiles : 0) +
-                    " file(s) to " + (_session != null && _session.RemoteDevice != null
-                        ? _session.RemoteDevice.Alias : "?"));
-                UpdateUI();
-            }
-            else
-            {
-                AppLog.W(TAG, "Opened with no TransferPageArgs");
-            }
         }
 
-        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        private void ReleaseDisplayRequest()
         {
-            base.OnNavigatedFrom(e);
-
-            // Release the screen-on lock taken in OnNavigatedTo.
             try
             {
                 if (_displayRequest != null)
@@ -83,33 +97,15 @@ namespace Vianium.LocalSend.Pages
             }
         }
 
-        private void UpdateUI()
+        private void ApplyStaticStrings()
         {
-            if (_session == null) return;
-
-            DeviceInfoText.Text = _session.RemoteDevice != null
-                ? _session.RemoteDevice.Alias : "Unknown";
-            TransferTitleText.Text = S.Sending;
-            ActionButton.Content = S.Cancel;
-            RefreshFileList();
-            UpdateProgress();
-        }
-
-        private void RefreshFileList()
-        {
-            var items = new List<FileDisplayItem>();
-            foreach (var kvp in _session.Files)
-            {
-                var f = kvp.Value;
-                items.Add(new FileDisplayItem
-                {
-                    FileName = f.File.FileName,
-                    SizeText = FileSizeConverter.Format(f.File.Size),
-                    StatusIcon = GetStatusIcon(f.Status),
-                    StatusColor = GetStatusBrush(f.Status)
-                });
-            }
-            FilesList.ItemsSource = items;
+            TransferTitleText.Text = _isReceive ? S.ReceivingTitle : S.SendingTitle;
+            TransferPeerText.Text = GetPeerLine();
+            RemainingLabelText.Text = S.Remaining.ToUpperInvariant();
+            SpeedLabelText.Text = S.Speed.ToUpperInvariant();
+            MinimizeButton.Content = S.Minimize.ToUpperInvariant();
+            CancelButton.Content = S.Cancel.ToUpperInvariant();
+            DoneButton.Content = S.Done.ToUpperInvariant();
         }
 
         public void UpdateProgress()
@@ -118,83 +114,190 @@ namespace Vianium.LocalSend.Pages
 
             long total = _session.TotalBytes;
             long transferred = _session.TransferredBytes;
+            double percent = total > 0 ? transferred * 100.0 / total : 0;
+            if (percent > 100) percent = 100;
 
-            double percent = total > 0 ? (transferred * 100.0 / total) : 0;
-            OverallProgressBar.Value = percent;
-            ProgressText.Text = (int)percent + "%";
-            FilesCountText.Text = S.Files(_session.CompletedFiles, _session.TotalFiles);
-            DataSizeText.Text = FileSizeConverter.Format(transferred) + " / " +
-                FileSizeConverter.Format(total);
-
-            if (_session.State == TransferState.Completed ||
-                _session.State == TransferState.Failed ||
-                _session.State == TransferState.Cancelled)
+            if (_session.State == TransferState.Completed)
             {
-                _isComplete = true;
-                ActionButton.Content = S.Back;
-
-                if (_session.State == TransferState.Completed)
-                {
-                    TransferTitleText.Text = S.Completed;
-                    OverallProgressBar.Value = 100;
-                }
-                else if (_session.State == TransferState.Cancelled)
-                {
-                    TransferTitleText.Text = S.Cancelled;
-                }
-                else
-                {
-                    TransferTitleText.Text = S.TransferError;
-                }
-
-                RefreshFileList();
+                ShowCompleteState();
+                return;
             }
+
+            if (_session.State == TransferState.Cancelled ||
+                _session.State == TransferState.Failed)
+            {
+                ShowTerminalProgressState();
+                return;
+            }
+
+            ProgressLayout.Visibility = Visibility.Visible;
+            CompleteLayout.Visibility = Visibility.Collapsed;
+            TransferTitleText.Text = _isReceive ? S.ReceivingTitle : S.SendingTitle;
+            TransferPeerText.Text = GetPeerLine();
+            ProgressPercentText.Text = ((int)percent) + "%";
+            SetProgressWidth(percent);
+            UpdateCurrentFile();
+            UpdateTransferStats(total, transferred);
         }
 
-        private void ActionButton_Click(object sender, RoutedEventArgs e)
+        private void ShowCompleteState()
         {
-            if (_isComplete)
+            _isTerminal = true;
+            ProgressLayout.Visibility = Visibility.Collapsed;
+            CompleteLayout.Visibility = Visibility.Visible;
+            CompleteTitleText.Text = S.TransferCompleteTitle;
+            CompletePeerText.Text = GetPeerLine();
+            CompleteFilesText.Text = S.FileCount(_session.TotalFiles);
+            CompleteSizeText.Text = FileSizeConverter.Format(_session.TotalBytes);
+        }
+
+        private void ShowTerminalProgressState()
+        {
+            _isTerminal = true;
+            ProgressLayout.Visibility = Visibility.Visible;
+            CompleteLayout.Visibility = Visibility.Collapsed;
+            TransferTitleText.Text = _session.State == TransferState.Cancelled
+                ? S.Cancelled.ToLowerInvariant()
+                : S.TransferError.ToLowerInvariant();
+            ProgressPercentText.Text = _session.State == TransferState.Cancelled ? "" : "!";
+            MinimizeButton.Visibility = Visibility.Collapsed;
+            CancelButton.Content = S.Back.ToUpperInvariant();
+            SetProgressWidth(0);
+        }
+
+        private string GetPeerLine()
+        {
+            string remote = _session != null && _session.RemoteDevice != null &&
+                !string.IsNullOrWhiteSpace(_session.RemoteDevice.Alias)
+                ? _session.RemoteDevice.Alias
+                : S.UnknownDevice;
+
+            return _isReceive ? S.FromPeer(remote) : S.ToPeer(remote);
+        }
+
+        private void SetProgressWidth(double percent)
+        {
+            double width = ProgressTrack.ActualWidth > 0
+                ? ProgressTrack.ActualWidth
+                : FallbackProgressWidth;
+            ProgressFill.Width = width * percent / 100.0;
+        }
+
+        private void UpdateCurrentFile()
+        {
+            var current = GetCurrentFile();
+            if (current == null)
             {
-                if (Frame.CanGoBack) Frame.GoBack();
+                CurrentFilePanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            CurrentFilePanel.Visibility = Visibility.Visible;
+            CurrentFileIndexText.Text = S.CurrentFileIndex(current.Index, _session.TotalFiles);
+            CurrentFileNameText.Text = current.Info.File.FileName;
+            CurrentFileSizeText.Text = FileSizeConverter.Format(current.Info.File.Size);
+        }
+
+        private CurrentFileSnapshot GetCurrentFile()
+        {
+            CurrentFileSnapshot firstQueued = null;
+            CurrentFileSnapshot lastCompleted = null;
+            int index = 0;
+
+            foreach (var item in _session.Files.Values)
+            {
+                index++;
+                if (item.Status == FileTransferStatus.Transferring)
+                    return new CurrentFileSnapshot { Index = index, Info = item };
+
+                if (item.Status == FileTransferStatus.Queued && firstQueued == null)
+                    firstQueued = new CurrentFileSnapshot { Index = index, Info = item };
+
+                if (item.Status == FileTransferStatus.Completed)
+                    lastCompleted = new CurrentFileSnapshot { Index = index, Info = item };
+            }
+
+            return firstQueued ?? lastCompleted;
+        }
+
+        private void UpdateTransferStats(long total, long transferred)
+        {
+            double elapsed = Math.Max(0.5, (DateTime.UtcNow - _startedAtUtc).TotalSeconds);
+            double bytesPerSecond = transferred / elapsed;
+
+            SpeedValueText.Text = transferred > 0
+                ? FileSizeConverter.Format((long)bytesPerSecond) + "/s"
+                : "--";
+
+            if (transferred > 0 && bytesPerSecond > 1 && total > transferred)
+            {
+                int remainingSeconds = (int)Math.Ceiling((total - transferred) / bytesPerSecond);
+                RemainingValueText.Text = S.TimeRemaining(remainingSeconds);
             }
             else
             {
-                AppLog.I(TAG, "User cancelled transfer");
-                if (_cts != null) _cts.Cancel();
-                if (_session != null) _session.State = TransferState.Cancelled;
-
-                _isComplete = true;
-                ActionButton.Content = S.Back;
-                TransferTitleText.Text = S.Cancelled;
+                RemainingValueText.Text = "--";
             }
         }
 
-        private static string GetStatusIcon(FileTransferStatus status)
+        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
         {
-            switch (status)
+            AppLog.I(TAG, "Transfer minimized");
+            GoBackOrHome();
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isTerminal)
             {
-                case FileTransferStatus.Queued: return "\uE121";
-                case FileTransferStatus.Transferring: return "\uE118";
-                case FileTransferStatus.Completed: return "\uE10B";
-                case FileTransferStatus.Failed: return "\uE10A";
-                case FileTransferStatus.Skipped: return "\uE108";
-                default: return "";
+                DismissTransfer();
+                GoBackOrHome();
+                return;
+            }
+
+            AppLog.I(TAG, "User cancelled transfer");
+            try
+            {
+                if (_cancelAction != null)
+                    _cancelAction();
+                else if (_cts != null)
+                    _cts.Cancel();
+            }
+            catch (Exception ex)
+            {
+                AppLog.W(TAG, "Cancel action failed: " + ex.Message);
+            }
+
+            if (_session != null)
+                _session.State = TransferState.Cancelled;
+            UpdateProgress();
+        }
+
+        private void DoneButton_Click(object sender, RoutedEventArgs e)
+        {
+            DismissTransfer();
+            GoBackOrHome();
+        }
+
+        private void DismissTransfer()
+        {
+            try
+            {
+                if (_dismissAction != null)
+                    _dismissAction();
+            }
+            catch (Exception ex)
+            {
+                AppLog.W(TAG, "Dismiss action failed: " + ex.Message);
             }
         }
 
-        private static SolidColorBrush GetStatusBrush(FileTransferStatus status)
+        private void GoBackOrHome()
         {
-            switch (status)
-            {
-                case FileTransferStatus.Completed:
-                    return new SolidColorBrush(Windows.UI.Color.FromArgb(255, 63, 185, 80));
-                case FileTransferStatus.Failed:
-                    return new SolidColorBrush(Windows.UI.Color.FromArgb(255, 248, 81, 73));
-                case FileTransferStatus.Transferring:
-                    return new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 120, 215));
-                default:
-                    return new SolidColorBrush(Windows.UI.Color.FromArgb(255, 139, 148, 158));
-            }
+            if (Frame.CanGoBack)
+                Frame.GoBack();
+            else
+                Frame.Navigate(typeof(MainPage));
         }
     }
 
@@ -202,13 +305,14 @@ namespace Vianium.LocalSend.Pages
     {
         public TransferSession Session { get; set; }
         public CancellationTokenSource CancellationSource { get; set; }
+        public bool IsReceive { get; set; }
+        public Action CancelAction { get; set; }
+        public Action DismissAction { get; set; }
     }
 
-    internal sealed class FileDisplayItem
+    internal sealed class CurrentFileSnapshot
     {
-        public string FileName { get; set; }
-        public string SizeText { get; set; }
-        public string StatusIcon { get; set; }
-        public SolidColorBrush StatusColor { get; set; }
+        public int Index { get; set; }
+        public FileTransferInfo Info { get; set; }
     }
 }

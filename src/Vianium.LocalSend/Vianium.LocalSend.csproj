@@ -8,11 +8,12 @@
     <OutputType>AppContainerExe</OutputType>
     <AppDesignFolder>Properties</AppDesignFolder>
     <RootNamespace>Vianium.LocalSend</RootNamespace>
-    <AssemblyName>Vianium.LocalSend</AssemblyName>
+    <AssemblyName>LocalSend</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
     <TargetPlatformVersion>8.1</TargetPlatformVersion>
     <MinimumVisualStudioVersion>12</MinimumVisualStudioVersion>
+    <VisualStudioVersion>14.0</VisualStudioVersion>
     <SynthesizeLinkMetadata>true</SynthesizeLinkMetadata>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -111,10 +112,12 @@
     <!-- Strings -->
     <Compile Include="Strings\Strings.cs" />
     <!-- Data -->
+    <Compile Include="Data\AppPreferences.cs" />
     <Compile Include="Data\TransferHistory.cs" />
     <Compile Include="Data\StorageConfig.cs" />
     <!-- Converters -->
     <Compile Include="Converters\FileSizeConverter.cs" />
+    <Compile Include="Converters\HexToBrushConverter.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -160,8 +163,8 @@
     <Content Include="Assets\WideLogo.scale-240.png" />
     <Content Include="Assets\logo-128.png" />
   </ItemGroup>
-  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
-    <VisualStudioVersion>12.0</VisualStudioVersion>
+  <PropertyGroup>
+    <WindowsXamlTargetsVersion>14.0</WindowsXamlTargetsVersion>
   </PropertyGroup>
-  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\WindowsXaml\v$(WindowsXamlTargetsVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
 </Project>
