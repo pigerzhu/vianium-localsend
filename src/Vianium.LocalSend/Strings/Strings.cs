@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // SPDX-FileCopyrightText: 2026 Angel Careaga <hello@angelcareaga.com>
+// SPDX-FileCopyrightText: 2026 pigerzhu
 
 using Windows.Storage;
+using System.Collections.Generic;
 
 namespace Vianium.LocalSend.Strings
 {
     /// <summary>
-    /// Centralized string resources with Spanish, English and Russian support.
+    /// Centralized string resources with Simplified Chinese, Spanish, English and Russian support.
     /// Language auto-detected from system, overridable via settings.
     /// </summary>
     internal static class S
@@ -14,6 +16,212 @@ namespace Vianium.LocalSend.Strings
         private const string LangEs = "es";
         private const string LangEn = "en";
         private const string LangRu = "ru";
+        private const string LangZh = "zh-Hans";
+        private static readonly Dictionary<string, string> ChineseStrings = new Dictionary<string, string>
+        {
+            { "Choose receive folder", "选择接收文件夹" },
+            { "receive", "接收" },
+            { "send", "发送" },
+            { "settings", "设置" },
+            { "Starting...", "正在启动…" },
+            { "Listening on ", "监听地址：" },
+            { "Suspended", "已暂停" },
+            { "Error: ", "错误：" },
+            { "Received files", "已接收文件" },
+            { "Waiting for files...", "等待接收文件…" },
+            { "Receiving...", "正在接收…" },
+            { "History", "历史记录" },
+            { "About", "关于" },
+            { "ready to receive", "可以接收文件" },
+            { "address", "地址" },
+            { "received", "已接收" },
+            { "total", "总计" },
+            { "nearby", "附近设备" },
+            { "Unknown device", "未知设备" },
+            { "Unknown", "未知" },
+            { "Receive address", "接收地址" },
+            { "No local address available yet.", "暂未获取本地地址。" },
+            { "RECEIVE · ACCEPT", "接收 · 确认" },
+            { "wants to send you ", "想向你发送 " },
+            { "Resume error: ", "恢复失败：" },
+            { " files - ", " 个文件 · " },
+            { "No files selected", "未选择文件" },
+            { " file(s) selected", " 个文件已选择" },
+            { "Text message...", "输入文字消息…" },
+            { "photos · videos · music · files", "照片 · 视频 · 音乐 · 文件" },
+            { "Nearby devices", "附近设备" },
+            { "Searching devices...", "正在搜索设备…" },
+            { "Searching...", "正在搜索…" },
+            { "Search", "搜索" },
+            { "Send files", "发送文件" },
+            { "MULTIPLE", "多选" },
+            { "SINGLE", "单选" },
+            { "Message sent to ", "消息已发送至 " },
+            { " devices", " 台设备" },
+            { "DEVICE", "设备" },
+            { "Name", "名称" },
+            { "My device", "我的设备" },
+            { "Model", "型号" },
+            { "NETWORK", "网络" },
+            { "Port: ", "端口：" },
+            { "Protocol: ", "协议：" },
+            { "app", "应用" },
+            { "quick save", "快速保存" },
+            { "require PIN", "要求输入 PIN" },
+            { "PIN", "PIN" },
+            { "new", "生成" },
+            { "start receiver automatically", "自动启动接收服务" },
+            { "Receiver stopped", "接收服务已停止" },
+            { "STORAGE", "存储" },
+            { "Images", "图片" },
+            { "Videos", "视频" },
+            { "Audio", "音频" },
+            { "Other files", "其他文件" },
+            { "APP", "应用" },
+            { "LANGUAGE", "语言" },
+            { "Sending...", "正在发送…" },
+            { "sending", "发送中" },
+            { "receiving", "接收中" },
+            { "transfer complete", "传输完成" },
+            { "Completed", "已完成" },
+            { "Cancelled", "已取消" },
+            { "Transfer error", "传输失败" },
+            { "Cancel", "取消" },
+            { "Back", "返回" },
+            { " files", " 个文件" },
+            { "to ", "发送至 " },
+            { "from ", "来自 " },
+            { "Minimize", "最小化" },
+            { "Maximize", "展开" },
+            { "Done", "完成" },
+            { "Remaining", "剩余时间" },
+            { "Speed", "速度" },
+            { " OF ", " / " },
+            { " s", " 秒" },
+            { " min", " 分钟" },
+            { " transfer(s)", " 次传输" },
+            { "No history", "暂无历史记录" },
+            { "Clear history", "清空历史记录" },
+            { "Clear all history?", "清空全部历史记录？" },
+            { "Confirm", "确认" },
+            { "Clear", "清空" },
+            { "TODAY", "今天" },
+            { "YESTERDAY", "昨天" },
+            { "sent", "已发送" },
+            { "Incoming transfer", "收到传输请求" },
+            { "Accept", "接受" },
+            { "Decline", "拒绝" },
+            { "Request from ", "请求来自 " },
+            { "Receiving from ", "正在接收，来自 " },
+            { "Transfer complete", "传输完成" },
+            { "Completed with errors", "已完成，但有错误" },
+            { "Send error", "发送失败" },
+            { "Sent", "已发送" },
+            { "Error", "错误" },
+            { "Version", "版本" },
+            { "Version 1.1.0 / Protocol 2.1", "版本 1.1.1.2 / 协议 2.1" },
+            { "Platform", "平台" },
+            { "Protocol", "协议" },
+            { "Repository", "代码仓库" },
+            { "Project", "项目" },
+            { "Features", "功能" },
+            { "Technology", "技术" },
+            { "COMPATIBILITY", "兼容性" },
+            { "Send and receive files with:", "可与以下设备收发文件：" },
+            { "ABOUT THIS PORT", "关于此移植版" },
+            { "P2P file sharing for Windows Phone 8.1, compatible with the LocalSend protocol.", "面向 Windows 10 Mobile 的点对点文件传输工具，兼容 LocalSend 协议。" },
+            { "Source-available product repository licensed under PolyForm Noncommercial License 1.0.0. Free for non-commercial use.", "源代码按 PolyForm Noncommercial License 1.0.0 提供，非商业用途可免费使用。" },
+            { "Direct local WiFi transfers. No internet, no account, no relay server, no telemetry.", "通过本地 Wi-Fi 直接传输，无需互联网、账号或中转服务器，不收集遥测数据。" },
+            { "Windows Phone 8.1 has no native bridge to the modern LocalSend ecosystem. This port fills that gap with a clean-room, protocol-compatible client.", "原项目为 WP8.1 提供兼容 LocalSend 的独立客户端；此分支迁移到 Windows 10 Mobile。" },
+            { "It turns a WP8.1 device into a full LocalSend peer that can send and receive files with desktop and mobile clients on the same local network.", "手机可与同一局域网内的电脑及移动设备直接收发文件。" },
+            { "This is the first and only LocalSend client for Windows Phone 8.1, built from scratch with native platform technologies.", "原作者从零开始实现了这个 Windows Phone 客户端。" },
+            { "Built with:", "技术实现：" },
+            { "Embedded HTTP server on StreamSocketListener", "基于 StreamSocketListener 的内置 HTTP 服务器" },
+            { "HTTP/HTTPS client with TLS 1.2 and self-signed certificates", "支持 TLS 1.2 和自签名证书的 HTTP/HTTPS 客户端" },
+            { "UDP multicast discovery and HTTP network scan", "UDP 多播发现与 HTTP 网络扫描" },
+            { "Direct-to-disk streaming transfer for large files", "大文件直接流式写入磁盘" },
+            { "Custom JSON parser and chunked transfer encoding", "自定义 JSON 解析与分块传输处理" },
+            { "Built entirely in C# and XAML on WinRT, with no external dependencies, proving this platform is still capable.", "原项目使用 WinRT、C# 和 XAML；此分支使用 UWP 构建工具。" },
+            { "DEVELOPER", "开发者" },
+            { "Software Engineer", "软件工程师" },
+            { "CREDITS", "致谢" },
+            { "Original protocol and app", "原始协议与应用" },
+            { "LICENSE", "许可" },
+            { "LocalSend is licensed under PolyForm Noncommercial License 1.0.0. Commercial use requires a separate license. LocalSend protocol attribution is provided separately.", "此客户端按 PolyForm Noncommercial License 1.0.0 授权，商业使用需另行许可；LocalSend 协议署名单独保留。" },
+            { "LocalSend is an independent WinRT/C# implementation of the LocalSend protocol for Windows Phone 8.1. It is self-contained and designed to keep older phones useful in mixed-device local networks.", "这是独立实现的 LocalSend 客户端，此分支由 pigerzhu 维护 Windows 10 Mobile 适配。" },
+            { "Compatible LocalSend clients can discover this phone and transfer directly over local WiFi. HTTP and optional HTTPS with self-signed certificates are supported.", "兼容客户端可发现此手机并通过本地 Wi-Fi 传输，支持 HTTP 及带自签名证书的可选 HTTPS。" },
+            { "Includes an embedded HTTP server, HTTPS client with self-signed certificate support, UDP multicast discovery and network scanning, file streaming transfer, and full compatibility with LocalSend protocol v2.1.", "内置 HTTP 服务器、HTTPS 客户端、多播发现、网络扫描和流式文件传输，兼容 LocalSend 2.1 协议。" },
+            { "Peer discovery through UDP multicast, with HTTP network-scan fallback.", "使用 UDP 多播发现设备，并提供 HTTP 网络扫描作为补充。" },
+            { "Embedded HTTP/1.1 server with streaming transfers instead of whole-file buffering.", "HTTP/1.1 服务器采用流式传输，不将整个文件载入内存。" },
+            { "Optional HTTPS with self-signed certificate support.", "可选 HTTPS，支持自签名证书。" },
+            { "Send and receive images, video, audio, documents, APKs, ZIPs and other files.", "可发送和接收图片、视频、音频、文档、APK、ZIP 等文件。" },
+            { "LocalSend text-message transfers.", "支持 LocalSend 文字消息。" },
+            { "Local transfer history and full-screen transfer progress that can be minimized and restored.", "本地传输记录和可收起、恢复的全屏进度页。" },
+            { "Spanish, English and Russian UI with system detection and manual override.", "支持简体中文、英语、西班牙语和俄语，可自动识别系统语言或手动切换。" },
+            { "Configurable storage targets: media libraries, public LocalSend folder, SD card or app sandbox.", "可选择接收目录、媒体库、SD 卡或应用内部存储。" },
+            { "LocalSend Desktop: Windows, macOS, Linux", "电脑客户端：Windows、macOS、Linux" },
+            { "LocalSend Mobile: Android, iOS", "移动客户端：Android、iOS" },
+            { "Independent LocalSend protocol clients", "其他兼容 LocalSend 协议的客户端" },
+            { "Built entirely on native WinRT/.NET 4.5 APIs: StreamSocket, StreamSocketListener, DatagramSocket, HttpClient and StorageFile. No NuGet packages, third-party DLLs or sibling Vianium dependencies.", "原项目基于 WinRT/.NET API；此分支通过 UWP 运行库构建 ARM32 安装包。" },
+            { "Previously published as PivoraLocalSend on the Windows Phone Store. v1.0.0 was the initial release; v1.0.1 added public storage targets, SD-card support beta, file-picker crash fixes and default-port fallback. Version 1.1.0 refreshes the UI, transfer flow, localization and receiver preferences.", "原项目曾以 PivoraLocalSend 发布；1.0.1 加入存储设置和迁移，1.1.0 更新界面与传输流程，此分支继续修复接收并适配 W10M。" },
+            { "Created and maintained by Angel Careaga as part of the Vianium ecosystem. This is an independent compatible implementation, not affiliated with, endorsed by or sponsored by LocalSend.", "原作者 Angel Careaga，属于 Vianium 项目；此分支由 pigerzhu 维护，与 LocalSend 官方无隶属、背书或赞助关系。" },
+            { "Photos Library", "照片库" },
+            { "Videos Library", "视频库" },
+            { "Music Library", "音乐库" },
+            { "User storage", "用户目录" },
+            { "SD Card (beta)", "SD 卡（测试）" },
+            { "App only", "应用内部" },
+            { "(only visible from this app)", "（仅此应用可见）" },
+            { "(interop not available - saving to app storage)", "（目录访问失败，保存到应用内部）" },
+            { "Queued", "排队中" },
+            { "Failed", "失败" },
+            { "Skipped", "已跳过" },
+            { "Sent to ", "发送至 " },
+            { "Received from ", "接收自 " },
+            { "Move ", "移动 " },
+            { "Moving files...", "正在移动文件…" },
+            { "Interop required. Files remain in app sandbox (not visible in File Manager).", "无法访问目标目录。请先选择接收文件夹；文件仍保留在应用内部。" },
+            { "Changelog", "更新记录" },
+            { "Renamed to LocalSend", "更名为 LocalSend" },
+            { "The deployment name, tile label, About page and package metadata now use LocalSend for a cleaner release identity.", "部署名称、磁贴、关于页面和包信息统一为 LocalSend。" },
+            { "Refreshed app screens", "更新应用界面" },
+            { "Receive, Send, History, Transfer and About were redesigned with better spacing, full-screen flows and Windows Phone-style typography.", "调整接收、发送、历史、传输和关于页面的布局与显示。" },
+            { "Transfer flow improvements", "改进传输流程" },
+            { "Incoming requests now show a clear accept screen, transfers use a dedicated progress page, and active transfers can be minimized and restored.", "收到请求后显示确认页，使用独立进度页，可收起和恢复传输。" },
+            { "Large-file reliability", "改进大文件接收" },
+            { "Receiving now streams directly to disk to avoid out-of-memory failures, cleans partial files on errors, and handles socket stop/start more safely.", "数据直接写入磁盘，避免内存不足；失败时清理未完成文件。" },
+            { "Receiver preferences", "接收设置" },
+            { "Quick save, required PIN and automatic receiver startup are now real settings backed by shared app preferences.", "快速保存、PIN 和自动启动接收服务均可配置。" },
+            { "Languages and history", "语言与历史记录" },
+            { "Added Russian localization, fixed language selection state, and rebuilt history with grouped days, direction, file counts and sizes.", "原版加入俄语并调整语言切换及历史分组；此分支加入简体中文。" },
+            { "Migrate old files", "迁移旧文件" },
+            { "SD Card support (beta)", "SD 卡支持（测试）" },
+            { "Fix: crash when selecting files", "修复选择文件时崩溃" },
+            { "Fixed a crash that occurred when the OS terminated the app in the background during file selection. The app now correctly restores its state after returning from the file picker.", "改进文件选择及返回后的状态处理。" },
+            { "Fix: connection to devices", "修复设备连接" },
+            { "Fixed an issue where sending files could fail if the target device info was incomplete. Now falls back to the default LocalSend port (53317).", "设备信息不完整时使用默认 LocalSend 端口 53317。" },
+            { "Initial release. First and only LocalSend client for Windows Phone 8.1. Send and receive files with Android, iOS, Windows, macOS, and Linux devices over local WiFi.", "原版首次发布：为 WP8.1 提供与安卓、iOS、电脑收发文件的客户端。" },
+            { "Diagnostics", "诊断" },
+            { "Level:", "级别：" },
+            { "All", "全部" },
+            { "Debug and up", "调试及以上" },
+            { "Info and up", "信息及以上" },
+            { "Warnings and up", "警告及以上" },
+            { "Errors only", "仅错误" },
+            { "No log entries at this level", "此级别下暂无日志" },
+            { "refresh", "刷新" },
+            { "share", "分享" },
+            { "clear", "清空" },
+            { "LocalSend log", "LocalSend 日志" },
+            { "No log file on disk yet.", "尚未生成日志文件。" },
+            { "Clear the in-memory log buffer? The rotating log files on disk are not affected.", "清空内存中的日志？磁盘上的日志文件不会被删除。" },
+            { " entries in memory · file: ", " 条内存日志 · 文件：" },
+            { "Source:", "来源：" },
+            { "Current session", "当前会话" },
+            { "On-disk file (all sessions)", "磁盘文件（全部会话）" },
+            { " lines on disk", " 行磁盘日志" },
+            { " log file(s)", " 个日志文件" },
+        };
 
         private static string _languageCode;
         private static bool _initialized;
@@ -47,6 +255,7 @@ namespace Vianium.LocalSend.Strings
                 return LangEn;
 
             string normalized = lang.ToLowerInvariant();
+            if (normalized.StartsWith("zh")) return LangZh;
             if (normalized.StartsWith("ru")) return LangRu;
             if (normalized.StartsWith("es")) return LangEs;
             if (normalized.StartsWith("en")) return LangEn;
@@ -56,6 +265,11 @@ namespace Vianium.LocalSend.Strings
         private static string T(string en, string es, string ru)
         {
             Init();
+            if (_languageCode == LangZh)
+            {
+                string translated;
+                if (ChineseStrings.TryGetValue(en, out translated)) return translated;
+            }
             if (_languageCode == LangRu) return ru;
             if (_languageCode == LangEs) return es;
             return en;
@@ -72,6 +286,8 @@ namespace Vianium.LocalSend.Strings
             return many;
         }
 
+        public static bool IsChinese { get { Init(); return _languageCode == LangZh; } }
+        public static string ChooseReceiveFolder { get { return T("Choose receive folder", "Elegir carpeta de recepción", "Выбрать папку приёма"); } }
         public static bool IsEnglish { get { Init(); return _languageCode == LangEn; } }
         public static bool IsSpanish { get { Init(); return _languageCode == LangEs; } }
         public static bool IsRussian { get { Init(); return _languageCode == LangRu; } }
@@ -122,6 +338,7 @@ namespace Vianium.LocalSend.Strings
 
         public static string FileCount(int n)
         {
+            if (IsChinese) return n + " 个文件";
             if (IsRussian)
                 return n + " " + RuPlural(n, "файл", "файла", "файлов");
             if (IsEnglish)
@@ -262,6 +479,7 @@ namespace Vianium.LocalSend.Strings
             if (index < 0) index = 0;
             if (index > 11) index = 11;
 
+            if (IsChinese) return (index + 1) + "月";
             if (IsRussian) return ru[index];
             if (IsSpanish) return es[index];
             return en[index];
@@ -271,6 +489,7 @@ namespace Vianium.LocalSend.Strings
         public static string IncomingTransfer { get { return T("Incoming transfer", "Transferencia entrante", "Входящая передача"); } }
         public static string WantsToSend(string name, int files, string size)
         {
+            if (IsChinese) return name + " 想发送 " + FileCount(files) + "（" + size + "）";
             if (IsRussian)
                 return name + " хочет отправить " + FileCount(files) + " (" + size + ")";
             return IsEnglish
@@ -287,6 +506,7 @@ namespace Vianium.LocalSend.Strings
         public static string CompletedWithErrors { get { return T("Completed with errors", "Completado con errores", "Завершено с ошибками"); } }
         public static string FilesReceived(int n)
         {
+            if (IsChinese) return "成功接收 " + FileCount(n) + "。";
             if (IsRussian)
                 return "Успешно получено: " + FileCount(n) + ".";
             return IsEnglish
@@ -295,6 +515,7 @@ namespace Vianium.LocalSend.Strings
         }
         public static string FilesReceivedWithErrors(int n)
         {
+            if (IsChinese) return "接收 " + FileCount(n) + "，但有错误。";
             if (IsRussian)
                 return "Получено с ошибками: " + FileCount(n) + ".";
             return IsEnglish
@@ -389,6 +610,7 @@ namespace Vianium.LocalSend.Strings
         public static string Migrating { get { return T("Moving files...", "Moviendo archivos...", "Перемещение файлов..."); } }
         public static string MigrationDone(int moved, int failed)
         {
+            if (IsChinese) return "已移动 " + moved + " 个文件，失败 " + failed + " 个。";
             if (failed == 0)
             {
                 if (IsRussian)

@@ -1344,6 +1344,12 @@ namespace Vianium.LocalSend.Pages
             ApplyStrings();
         }
 
+        private void LangZhButton_Click(object sender, RoutedEventArgs e)
+        {
+            S.SetLanguage("zh-Hans");
+            ApplyStrings();
+        }
+
         private void LangRuButton_Click(object sender, RoutedEventArgs e)
         {
             S.SetLanguage("ru");
@@ -1398,6 +1404,7 @@ namespace Vianium.LocalSend.Pages
             LangEsButton.Content = S.Spanish;
             LangEnButton.Content = S.English;
             LangRuButton.Content = S.Russian;
+            ChooseReceiveFolderButton.Content = S.ChooseReceiveFolder;
             ApplyLanguageSelectionState(S.CurrentLanguageCode);
             ApplyIncomingRequestStrings();
             UpdatePinSettingsVisibility();
@@ -1419,6 +1426,7 @@ namespace Vianium.LocalSend.Pages
             StyleLanguageButton(LangEsButton, languageCode == "es");
             StyleLanguageButton(LangEnButton, languageCode == "en");
             StyleLanguageButton(LangRuButton, languageCode == "ru");
+            StyleLanguageButton(LangZhButton, languageCode == "zh-Hans");
         }
 
         private static void StyleLanguageButton(Button button, bool selected)
