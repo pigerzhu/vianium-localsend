@@ -1,0 +1,29 @@
+name: Build WP8.1 ARM
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Hosted probes SDK availability; self-hosted needs VS2015/WP8.1 and wp81 label'
+        type: choice
+        options: [hosted, self-hosted]
+        default: hosted
+permissions:
+  contents: read
+jobs:
+  arm:
+    runs-on: ${{ inputs.runner == 'hosted' && 'windows-2022' || fromJSON('["self-hosted","Windows","X64","wp81"]') }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build ARM package
+        shell: powershell
+        run: ./scripts/Build-WP81.ps1
+      - name: Upload package and build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocalSend-WP81-ARM
+          path: artifacts/
+          if-no-files-found: warn

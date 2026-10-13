@@ -9,3 +9,9 @@ Changes maintained by pigerzhu. Original authorship and PolyForm Noncommercial l
 Validation: XML parsing and diff whitespace checks passed; the actual ParseChunkSize method compiled with .NET Framework C# compiler and passed extension, zero, large size, malformed and overflow cases. Chunk-framing smoke test added (extensions, trailers, invalid sizes). WP8.1 ARM build and phone tests are required. The current workstation has no compatible WP8.1 MSBuild/SDK; no ARM package is claimed as built or tested.
 
 Phone checks: choose a visible receive folder, restart and check retained access; migrate a small existing sandbox file; receive a nonempty text file, then a large APPX from Android; compare size/hash; test cancellation and truncated upload; confirm original media destinations. Never remove the original app before backing up its LocalState.
+
+## GitHub Actions ARM build
+
+Use Actions → Build WP8.1 ARM. `hosted` checks whether the GitHub Windows image has the required old toolchain; it fails explicitly if absent. `self-hosted` builds on a Windows x64 machine with VS2015, Windows Phone 8.1 tools and runner label `wp81`. Only manually dispatched builds run on that machine; pull requests do not execute there.
+
+The workflow runs the original WP8.1 project and uploads APPX files/build logs. Packages are unsigned: signing/deployment must be handled separately, and no publisher private key is committed. This workflow does not install VS2015, invent a working hosted SDK, or claim a passing ARM build before it has run.
