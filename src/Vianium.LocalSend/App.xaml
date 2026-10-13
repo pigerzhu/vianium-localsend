@@ -7,10 +7,14 @@
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="PhoneBackgroundBrush" Color="#FF000000" />
+                    <SolidColorBrush x:Key="PhoneForegroundBrush" Color="#FFFFFFFF" />
                     <SolidColorBrush x:Key="PhoneSubtleBrush" Color="#FF8B949E" />
                     <SolidColorBrush x:Key="PhoneChromeBrush" Color="#FF1F1F1F" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="PhoneBackgroundBrush" Color="#FFFFFFFF" />
+                    <SolidColorBrush x:Key="PhoneForegroundBrush" Color="#FF000000" />
                     <SolidColorBrush x:Key="PhoneSubtleBrush" Color="#FF656D76" />
                     <SolidColorBrush x:Key="PhoneChromeBrush" Color="#FFF0F0F0" />
                 </ResourceDictionary>
