@@ -11,7 +11,7 @@ permissions:
   contents: read
 jobs:
   arm:
-    runs-on: ${{ inputs.runner == 'hosted' && 'windows-2022' || fromJSON('["self-hosted","Windows","X64","wp81"]') }}
+    runs-on: ${{ inputs.runner != 'self-hosted' && 'windows-2022' || fromJSON('["self-hosted","Windows","X64","wp81"]') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -27,3 +27,4 @@ jobs:
           name: LocalSend-WP81-ARM
           path: artifacts/
           if-no-files-found: warn
+
