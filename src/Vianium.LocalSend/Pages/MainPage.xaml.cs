@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // SPDX-FileCopyrightText: 2026 Angel Careaga <hello@angelcareaga.com>
+// SPDX-FileCopyrightText: 2026 pigerzhu
 
 using System;
 using System.Collections.Generic;
@@ -1245,6 +1246,20 @@ namespace Vianium.LocalSend.Pages
         private void ImageDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("image"); }
         private void VideoDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("video"); }
         private void AudioDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("audio"); }
+        private void ChooseReceiveFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var picker = new Windows.Storage.Pickers.FolderPicker();
+            picker.FileTypeFilter.Add("*");
+            picker.PickFolderAndContinue();
+        }
+
+        public void ContinueReceiveFolderPicker(Windows.ApplicationModel.Activation.FolderPickerContinuationEventArgs args)
+        {
+            if (args.Folder == null) return;
+            StorageConfig.RememberReceiveFolder(args.Folder);
+            RefreshStorageButtons();
+        }
+
         private async void OtherDestButton_Click(object sender, RoutedEventArgs e)
         {
             _sdAvailable = await StorageConfig.IsSdCardAvailableAsync();

@@ -129,6 +129,8 @@ namespace Vianium.LocalSend.SmokeTests
             list.Add(Make("HTTP: parse multi headers",     RequestParserSmoke.ParseMultipleHeaders));
             list.Add(Make("HTTP: reject empty payload",    RequestParserSmoke.RejectEmpty));
 
+            list.Add(Make("HTTP: chunk framing and trailers", RequestParserSmoke.ChunkFraming));
+
             // 6. End-to-end protocol flow
             list.Add(Make("Flow: prepare-upload request shape", ProtocolFlowSmoke.PrepareUploadShape));
             list.Add(Make("Flow: prepare-upload response shape", ProtocolFlowSmoke.PrepareUploadResponseShape));

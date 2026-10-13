@@ -113,6 +113,47 @@ namespace Vianium.LocalSend.SmokeTests
             return Pass("RejectEmpty");
         }
 
+        public static async Task<SmokeResult> ChunkFraming()
+        {
+            var stream = new InMemoryRandomAccessStream();
+            using (var writer = new DataWriter(stream.GetOutputStreamAt(0)))
+            {
+                writer.WriteBytes(Encoding.UTF8.GetBytes("4;test=yes\r\nWiki\r\n5\r\npedia\r\n0\r\nX-Test: ok\r\n\r\n"));
+                await writer.StoreAsync();
+                writer.DetachStream();
+            }
+            using (var reader = new DataReader(stream.GetInputStreamAt(0)))
+            {
+                reader.InputStreamOptions = InputStreamOptions.Partial;
+                var result = new StringBuilder();
+                while (true)
+                {
+                    long size = RequestParser.ParseChunkSize(await RequestParser.ReadLineAsync(reader));
+                    if (size == 0) break;
+                    while (size > 0)
+                    {
+                        uint loaded = await reader.LoadAsync((uint)size);
+                        if (loaded == 0) return Fail("ChunkFraming", "truncated data");
+                        var bytes = new byte[loaded];
+                        reader.ReadBytes(bytes);
+                        result.Append(Encoding.UTF8.GetString(bytes, 0, bytes.Length));
+                        size -= loaded;
+                    }
+                    if ((await RequestParser.ReadLineAsync(reader)).Length != 0)
+                        return Fail("ChunkFraming", "missing terminator");
+                }
+                if (result.ToString() != "Wikipedia") return Fail("ChunkFraming", "wrong body");
+                if (await RequestParser.ReadLineAsync(reader) != "X-Test: ok") return Fail("ChunkFraming", "wrong trailer");
+                if ((await RequestParser.ReadLineAsync(reader)).Length != 0) return Fail("ChunkFraming", "missing end");
+            }
+            foreach (string invalid in new[] { "", "xyz", "-1", "FFFFFFFFFFFFFFFF" })
+            {
+                try { RequestParser.ParseChunkSize(invalid); return Fail("ChunkFraming", "accepted invalid chunk size"); }
+                catch (Exception) { }
+            }
+            return Pass("ChunkFraming");
+        }
+
         private static async Task<ServerRequest> ParseAsync(string raw)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(raw);

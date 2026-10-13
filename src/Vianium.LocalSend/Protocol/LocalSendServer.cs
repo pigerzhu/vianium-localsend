@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // SPDX-FileCopyrightText: 2026 Angel Careaga <hello@angelcareaga.com>
+// SPDX-FileCopyrightText: 2026 pigerzhu
 
 using System;
 using System.Collections.Generic;
@@ -444,12 +445,44 @@ namespace Vianium.LocalSend.Protocol
                 using (var fileStream = await file.OpenAsync(FileAccessMode.ReadWrite))
                 using (var outputStream = fileStream.GetOutputStreamAt(0))
                 {
-                    int remaining = contentLength;
-                    while (remaining > 0)
+                    string transferEncoding;
+                    bool chunked = req.Headers.TryGetValue("Transfer-Encoding", out transferEncoding);
+                    if (chunked && !string.Equals(transferEncoding.Trim(), "chunked", StringComparison.OrdinalIgnoreCase))
+                        throw new Exception("Unsupported Transfer-Encoding");
+                    long expectedSize = fileInfo.File.Size;
+                    string lengthHeader;
+                    long declaredLength = expectedSize;
+                    if (!chunked && req.Headers.TryGetValue("Content-Length", out lengthHeader) &&
+                        (!long.TryParse(lengthHeader, out declaredLength) || declaredLength < 0))
+                        throw new Exception("Invalid Content-Length");
+                    if (expectedSize < 0) throw new Exception("Invalid announced file size");
+                    long remaining = chunked ? 0 : declaredLength;
+                    if (!chunked && remaining != expectedSize)
+                        throw new Exception("Content-Length does not match announced file size");
+                    bool needChunk = chunked;
+                    while (remaining > 0 || needChunk)
                     {
                         if (_activeSession == null || _activeSession.State == TransferState.Cancelled)
                             throw new OperationCanceledException("Transfer cancelled");
 
+                        if (needChunk)
+                        {
+                            remaining = RequestParser.ParseChunkSize(await RequestParser.ReadLineAsync(bodyReader));
+                            if (remaining == 0)
+                            {
+                                int trailerBytes = 0;
+                                string trailer;
+                                while ((trailer = await RequestParser.ReadLineAsync(bodyReader)).Length > 0)
+                                {
+                                    trailerBytes += trailer.Length;
+                                    if (trailerBytes > 65536) throw new Exception("Chunk trailers too large");
+                                }
+                                break;
+                            }
+                            if (remaining > expectedSize - totalWritten)
+                                throw new Exception("Upload exceeds announced file size");
+                            needChunk = false;
+                        }
                         uint toRead = (uint)Math.Min(remaining, StreamChunkSize);
                         uint loaded = await bodyReader.LoadAsync(toRead);
                         if (loaded == 0)
@@ -460,7 +493,13 @@ namespace Vianium.LocalSend.Protocol
 
                         totalWritten += loaded;
                         pendingWriteBytes += (int)loaded;
-                        remaining -= (int)loaded;
+                        remaining -= loaded;
+                        if (chunked && remaining == 0)
+                        {
+                            if ((await RequestParser.ReadLineAsync(bodyReader)).Length != 0)
+                                throw new Exception("Invalid chunk terminator");
+                            needChunk = true;
+                        }
 
                         if (pendingWriteBytes >= DiskFlushThreshold)
                         {
@@ -479,6 +518,8 @@ namespace Vianium.LocalSend.Protocol
                         await outputStream.FlushAsync();
                 }
 
+                if (totalWritten != fileInfo.File.Size)
+                    throw new Exception("Received file size does not match announced size");
                 fileInfo.Status = FileTransferStatus.Completed;
                 fileInfo.SavedPath = file.Path;
 

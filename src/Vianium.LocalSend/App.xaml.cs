@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // SPDX-FileCopyrightText: 2026 Angel Careaga <hello@angelcareaga.com>
+// SPDX-FileCopyrightText: 2026 pigerzhu
 
 using System;
 using System.Threading.Tasks;
@@ -93,6 +94,13 @@ namespace Vianium.LocalSend
             {
                 AppLog.D(TAG, "OnActivated — navigating to MainPage");
                 rootFrame.Navigate(typeof(Pages.MainPage));
+            }
+
+            if (args.Kind == ActivationKind.PickFolderContinuation)
+            {
+                var page = rootFrame.Content as Pages.MainPage;
+                var folderArgs = args as FolderPickerContinuationEventArgs;
+                if (page != null && folderArgs != null) page.ContinueReceiveFolderPicker(folderArgs);
             }
 
             if (args.Kind == ActivationKind.PickFileContinuation)

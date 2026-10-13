@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // SPDX-FileCopyrightText: 2026 Angel Careaga <hello@angelcareaga.com>
+// SPDX-FileCopyrightText: 2026 pigerzhu
 
 using System;
 using System.Threading.Tasks;
 using Windows.Storage;
+using Windows.Storage.AccessCache;
 using Vianium.LocalSend.Logging;
 using Vianium.LocalSend.Strings;
 
@@ -17,6 +19,27 @@ namespace Vianium.LocalSend.Data
     internal static class StorageConfig
     {
         private const string TAG = "Storage";
+        private const string ReceiveFolderToken = "LocalSendReceiveFolder";
+
+        public static void RememberReceiveFolder(StorageFolder folder)
+        {
+            StorageApplicationPermissions.FutureAccessList.AddOrReplace(ReceiveFolderToken, folder);
+            SetOtherDestination(DestLibrary);
+            SetSetting("receive_folder_path", folder.Path);
+        }
+
+        private static async Task<StorageFolder> GetAuthorizedFolderAsync()
+        {
+            var access = StorageApplicationPermissions.FutureAccessList;
+            if (!access.ContainsItem(ReceiveFolderToken)) return null;
+            try { return await access.GetFolderAsync(ReceiveFolderToken); }
+            catch (Exception ex)
+            {
+                AppLog.W(TAG, "Selected receive folder unavailable: " + ex.Message);
+                return null;
+            }
+        }
+
 
         // Interop paths to try — in order of preference
         // D:\ = SD card (devices with external storage)
@@ -192,6 +215,8 @@ namespace Vianium.LocalSend.Data
         /// </summary>
         private static async Task<StorageFolder> GetInteropOtherFolderAsync()
         {
+            var authorized = await GetAuthorizedFolderAsync();
+            if (authorized != null) return authorized;
             foreach (var rootPath in InteropRoots)
             {
                 try
@@ -252,7 +277,7 @@ namespace Vianium.LocalSend.Data
                 default:
                     string dest = GetOtherDestination();
                     if (dest == DestSdCard) return S.PathSdCard;
-                    if (dest == DestLibrary) return S.PathUserStorage;
+                    if (dest == DestLibrary) return GetSetting("receive_folder_path", S.PathUserStorage);
                     return S.PathAppOnly;
             }
         }
@@ -338,11 +363,12 @@ namespace Vianium.LocalSend.Data
             }
 
             // Try to get/create LocalSend folder via interop
-            StorageFolder newFolder = null;
+            StorageFolder newFolder = await GetAuthorizedFolderAsync();
             foreach (var rootPath in InteropRoots)
             {
                 try
                 {
+                    if (newFolder != null) break;
                     AppLog.I(TAG, "Migrate: trying root " + rootPath);
                     var root = await StorageFolder.GetFolderFromPathAsync(rootPath);
                     newFolder = await root.CreateFolderAsync("LocalSend",

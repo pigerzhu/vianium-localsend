@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // SPDX-FileCopyrightText: 2026 Angel Careaga <hello@angelcareaga.com>
+// SPDX-FileCopyrightText: 2026 pigerzhu
 
 using System;
 using System.Collections.Generic;
@@ -113,6 +114,34 @@ namespace Vianium.LocalSend.Server
             }
 
             return request;
+        }
+
+        public static async Task<string> ReadLineAsync(DataReader reader)
+        {
+            var bytes = new List<byte>();
+            while (true)
+            {
+                if (await reader.LoadAsync(1) == 0) throw new Exception("Truncated chunk header");
+                byte b = reader.ReadByte();
+                if (b == 10)
+                {
+                    if (bytes.Count == 0 || bytes[bytes.Count - 1] != 13)
+                        throw new Exception("Invalid chunk line ending");
+                    bytes.RemoveAt(bytes.Count - 1);
+                    return Encoding.UTF8.GetString(bytes.ToArray(), 0, bytes.Count);
+                }
+                bytes.Add(b);
+                if (bytes.Count > 8192) throw new Exception("Chunk header too large");
+            }
+        }
+
+        public static long ParseChunkSize(string line)
+        {
+            long size;
+            if (!long.TryParse(line.Split(';')[0].Trim(), System.Globalization.NumberStyles.AllowHexSpecifier,
+                System.Globalization.CultureInfo.InvariantCulture, out size) || size < 0)
+                throw new Exception("Invalid chunk size");
+            return size;
         }
 
         private static void ParseRequestLine(ServerRequest request, string line)

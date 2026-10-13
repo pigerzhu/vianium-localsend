@@ -689,6 +689,7 @@
                         </Grid>
                     </Border>
 
+                    <Button Content="Choose receive folder / 选择接收文件夹" HorizontalAlignment="Stretch" Click="ChooseReceiveFolder_Click"/>
                     <Button x:Name="MigrateButton" HorizontalAlignment="Stretch"
                             Margin="0,8,0,0" Visibility="Collapsed"
                             Background="#FF1BA1E2" Foreground="White"
