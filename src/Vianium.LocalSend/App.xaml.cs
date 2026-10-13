@@ -96,32 +96,6 @@ namespace Vianium.LocalSend
                 rootFrame.Navigate(typeof(Pages.MainPage));
             }
 
-            if (args.Kind == ActivationKind.PickFolderContinuation)
-            {
-                var page = rootFrame.Content as Pages.MainPage;
-                var folderArgs = args as FolderPickerContinuationEventArgs;
-                if (page != null && folderArgs != null) page.ContinueReceiveFolderPicker(folderArgs);
-            }
-
-            if (args.Kind == ActivationKind.PickFileContinuation)
-            {
-                var pickerArgs = args as FileOpenPickerContinuationEventArgs;
-                if (pickerArgs != null)
-                {
-                    int count = pickerArgs.Files != null ? pickerArgs.Files.Count : 0;
-                    AppLog.I(TAG, "OnActivated — file picker continuation, " + count + " file(s)");
-                    var mainPage = rootFrame.Content as Pages.MainPage;
-                    if (mainPage != null)
-                    {
-                        mainPage.ContinueFileOpenPicker(pickerArgs);
-                    }
-                    else
-                    {
-                        AppLog.W(TAG, "OnActivated — picker continuation but MainPage not available");
-                    }
-                }
-            }
-
             Window.Current.Activate();
         }
 

@@ -1,0 +1,25 @@
+name: Build W10M ARM
+on:
+  push:
+    branches: [fix/receive-storage]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  arm:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build W10M ARM package
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory artifacts -Force | Out-Null
+          msbuild src/Vianium.LocalSend/Vianium.LocalSend.csproj /restore /t:Rebuild /p:Configuration=Debug /p:Platform=ARM /p:AppxBundle=Never /p:AppxPackageSigningEnabled=false /p:UseDotNetNativeToolchain=false /p:GenerateAppxPackageOnBuild=true "/p:AppxPackageDir=$pwd\artifacts\" /fl /flp:logfile=artifacts/build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: LocalSend-W10M-ARM
+          path: artifacts/

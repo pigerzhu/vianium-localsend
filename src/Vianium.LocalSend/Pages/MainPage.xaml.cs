@@ -362,7 +362,7 @@ namespace Vianium.LocalSend.Pages
             UpdateSendButtonState();
         }
 
-        private void PickFilesButton_Click(object sender, RoutedEventArgs e)
+        private async void PickFilesButton_Click(object sender, RoutedEventArgs e)
         {
             // Opening the picker suspends this app. A double-tap would call
             // PickMultipleFilesAndContinue twice — the second call throws,
@@ -384,7 +384,9 @@ namespace Vianium.LocalSend.Pages
                 picker.ViewMode = PickerViewMode.List;
                 picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
                 picker.FileTypeFilter.Add("*");
-                picker.PickMultipleFilesAndContinue();
+                var files = await picker.PickMultipleFilesAsync();
+                ContinueFileSelection(files);
+                _pickerInFlight = false;
             }
             catch (Exception ex)
             {
@@ -394,20 +396,20 @@ namespace Vianium.LocalSend.Pages
             }
         }
 
-        public void ContinueFileOpenPicker(FileOpenPickerContinuationEventArgs args)
+        public void ContinueFileSelection(System.Collections.Generic.IReadOnlyList<StorageFile> files)
         {
             // Picker returned (with files or cancelled) — release the guard.
             _pickerInFlight = false;
 
             try
             {
-                int count = args != null && args.Files != null ? args.Files.Count : 0;
+                int count = files != null ? files.Count : 0;
                 AppLog.I(TAG, "File picker returned " + count + " file(s)");
                 if (count == 0)
                     return;
 
                 _selectedFiles.Clear();
-                foreach (var f in args.Files)
+                foreach (var f in files)
                 {
                     if (f != null)
                         _selectedFiles.Add(f);
@@ -1246,18 +1248,18 @@ namespace Vianium.LocalSend.Pages
         private void ImageDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("image"); }
         private void VideoDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("video"); }
         private void AudioDestButton_Click(object sender, RoutedEventArgs e) { ToggleDestination("audio"); }
-        private void ChooseReceiveFolder_Click(object sender, RoutedEventArgs e)
+        private async void ChooseReceiveFolder_Click(object sender, RoutedEventArgs e)
         {
-            var picker = new Windows.Storage.Pickers.FolderPicker();
-            picker.FileTypeFilter.Add("*");
-            picker.PickFolderAndContinue();
-        }
-
-        public void ContinueReceiveFolderPicker(Windows.ApplicationModel.Activation.FolderPickerContinuationEventArgs args)
-        {
-            if (args.Folder == null) return;
-            StorageConfig.RememberReceiveFolder(args.Folder);
-            RefreshStorageButtons();
+            try
+            {
+                var picker = new Windows.Storage.Pickers.FolderPicker();
+                picker.FileTypeFilter.Add("*");
+                var folder = await picker.PickSingleFolderAsync();
+                if (folder == null) return;
+                StorageConfig.RememberReceiveFolder(folder);
+                RefreshStorageButtons();
+            }
+            catch (Exception ex) { await ShowMessageAsync(S.Error, ex.Message); }
         }
 
         private async void OtherDestButton_Click(object sender, RoutedEventArgs e)

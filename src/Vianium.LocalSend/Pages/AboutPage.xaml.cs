@@ -114,7 +114,7 @@ namespace Vianium.LocalSend.Pages
             CompatibilityDesktopText.Text = S.CompatibilityDesktop;
             CompatibilityMobileText.Text = S.CompatibilityMobile;
             CompatibilityClientsText.Text = S.CompatibilityClients;
-            CompatibilityPhoneText.Text = "Windows Phone 8.1";
+            CompatibilityPhoneText.Text = "Windows 10 Mobile (14393+)";
             CompatibilityNote.Text = S.CompatibilityNote;
             HistorySectionText.Text = S.History.ToUpperInvariant();
             HistoryText.Text = S.AboutHistory;
