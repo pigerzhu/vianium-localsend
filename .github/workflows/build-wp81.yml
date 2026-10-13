@@ -1,5 +1,8 @@
 name: Build WP8.1 ARM
 on:
+  push:
+    branches: [fix/receive-storage]
+    paths: [scripts/Build-WP81.ps1, .github/workflows/build-wp81.yml]
   workflow_dispatch:
     inputs:
       runner:
@@ -27,4 +30,5 @@ jobs:
           name: LocalSend-WP81-ARM
           path: artifacts/
           if-no-files-found: warn
+
 
